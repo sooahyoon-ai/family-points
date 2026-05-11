@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -225,7 +224,7 @@ h1{font-size:15px;font-weight:700;text-align:center;margin-bottom:.5rem;color:#0
 .toggle-sw{position:relative;width:42px;height:24px;flex-shrink:0;}
 .toggle-sw input{opacity:0;width:0;height:0;}
 .toggle-sl{position:absolute;inset:0;background:#ccc;border-radius:12px;cursor:pointer;transition:.2s;}
-.toggle-sl:before{content:””;position:absolute;width:18px;height:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s;}
+.toggle-sl:before{content:"";position:absolute;width:18px;height:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s;}
 input:checked+.toggle-sl{background:#1D9E75;}
 input:checked+.toggle-sl:before{transform:translateX(18px);}
 
@@ -278,7 +277,6 @@ input:checked+.toggle-sl:before{transform:translateX(18px);}
 .welcome-stop-row label{font-size:12px;color:#888;cursor:pointer;}
 .welcome-close{width:100%;padding:11px;border-radius:12px;border:none;background:#1D9E75;color:#fff;font-size:15px;font-weight:700;cursor:pointer;-webkit-appearance:none;}
 </style>
-
 </head>
 <body>
 <div class="sync-bar" id="sync-bar"></div>
@@ -287,70 +285,67 @@ input:checked+.toggle-sl:before{transform:translateX(18px);}
     <h1>⭐ <span id="app-title">가족 포인트</span><span id="admin-badge" class="admin-badge">관리자</span></h1>
     <div style="display:flex;align-items:center;justify-content:flex-end;gap:5px;padding:0 4px 2px"><div class="sync-status" id="sync-status" style="display:inline;"></div><button onclick="manualSync()" title="새로고침" style="padding:1px 5px;border-radius:5px;border:1px solid #d3d1c7;background:#fff;cursor:pointer;font-size:12px;line-height:1.4;-webkit-appearance:none;flex-shrink:0;">↻</button></div>
 
-```
-<div class="kids-grid">
-  <div class="kid-card">
-    <div class="kid-top">
-      <div class="kid-left">
-        <div class="avatar av-ian" id="kid1-av">이</div>
-        <div><div class="kid-name" id="kid1-name">이안</div><div class="kid-sub" id="kid1-sub">4학년</div></div>
+    <div class="kids-grid">
+      <div class="kid-card">
+        <div class="kid-top">
+          <div class="kid-left">
+            <div class="avatar av-ian" id="kid1-av">이</div>
+            <div><div class="kid-name" id="kid1-name">이안</div><div class="kid-sub" id="kid1-sub">4학년</div></div>
+          </div>
+          <div class="kid-right">
+            <div class="pts-big" id="ian-pts">0</div>
+            <div class="pts-pend" id="ian-pend"></div>
+            <div class="pts-label">총 포인트</div>
+          </div>
+        </div>
+        <div class="kid-footer">
+          <button class="all-btn all-ian" onclick="checkAll('ian')">✓ 전체</button>
+          <button class="all-btn all-ian" onclick="uncheckAll('ian')">전체 해제</button>
+        </div>
       </div>
-      <div class="kid-right">
-        <div class="pts-big" id="ian-pts">0</div>
-        <div class="pts-pend" id="ian-pend"></div>
-        <div class="pts-label">총 포인트</div>
+      <div class="kid-card">
+        <div class="kid-top">
+          <div class="kid-left">
+            <div class="avatar av-logan" id="kid2-av">로</div>
+            <div><div class="kid-name" id="kid2-name">로건</div><div class="kid-sub" id="kid2-sub">1학년</div></div>
+          </div>
+          <div class="kid-right">
+            <div class="pts-big" id="logan-pts">0</div>
+            <div class="pts-pend" id="logan-pend"></div>
+            <div class="pts-label">총 포인트</div>
+          </div>
+        </div>
+        <div class="kid-footer">
+          <button class="all-btn all-logan" onclick="checkAll('logan')">✓ 전체</button>
+          <button class="all-btn all-logan" onclick="uncheckAll('logan')">전체 해제</button>
+        </div>
       </div>
     </div>
-    <div class="kid-footer">
-      <button class="all-btn all-ian" onclick="checkAll('ian')">✓ 전체</button>
-      <button class="all-btn all-ian" onclick="uncheckAll('ian')">전체 해제</button>
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('today',this)">할일</button>
+      <button class="tab" onclick="showTab('shop',this)">쿠폰샵</button>
+      <button class="tab" onclick="showTab('wallet',this)">쿠폰함</button>
+      <button class="tab" onclick="showTab('cal',this)">📅 월별</button>
+      <button class="tab" onclick="showTab('history',this)">내역</button>
+      <button class="tab" onclick="showTab('options',this)">⚙️</button>
     </div>
-  </div>
-  <div class="kid-card">
-    <div class="kid-top">
-      <div class="kid-left">
-        <div class="avatar av-logan" id="kid2-av">로</div>
-        <div><div class="kid-name" id="kid2-name">로건</div><div class="kid-sub" id="kid2-sub">1학년</div></div>
+    <!-- 날짜 네비: 할일 탭에서만 표시 -->
+    <div class="date-nav" id="date-nav-row">
+      <button class="dnav-btn" id="btn-prev" onclick="moveDay(-1)">‹</button>
+      <div class="date-lbl" id="date-lbl"></div>
+      <button class="dnav-btn" id="btn-next" onclick="moveDay(1)">›</button>
+      <button class="today-btn" onclick="goToday()">오늘</button>
+    </div>
+    <!-- 확정 바: 항상 상단 고정 (할일 탭에서만 표시) -->
+    <div class="conf-bar empty" id="conf-bar" style="display:none">
+      <div class="conf-top">
+        <div class="conf-info" id="conf-info">체크한 항목이 없어요</div>
+        <div class="conf-actions">
+          <button class="edit-mode-btn" id="edit-mode-btn" onclick="enterEditMode()">✏️ 수정</button>
+          <button class="conf-btn" id="conf-btn" onclick="confirmDay()" disabled>확정</button>
+        </div>
       </div>
-      <div class="kid-right">
-        <div class="pts-big" id="logan-pts">0</div>
-        <div class="pts-pend" id="logan-pend"></div>
-        <div class="pts-label">총 포인트</div>
-      </div>
     </div>
-    <div class="kid-footer">
-      <button class="all-btn all-logan" onclick="checkAll('logan')">✓ 전체</button>
-      <button class="all-btn all-logan" onclick="uncheckAll('logan')">전체 해제</button>
-    </div>
-  </div>
-</div>
-<div class="tabs">
-  <button class="tab active" onclick="showTab('today',this)">할일</button>
-  <button class="tab" onclick="showTab('shop',this)">쿠폰샵</button>
-  <button class="tab" onclick="showTab('wallet',this)">쿠폰함</button>
-  <button class="tab" onclick="showTab('cal',this)">📅 월별</button>
-  <button class="tab" onclick="showTab('history',this)">내역</button>
-  <button class="tab" onclick="showTab('options',this)">⚙️</button>
-</div>
-<!-- 날짜 네비: 할일 탭에서만 표시 -->
-<div class="date-nav" id="date-nav-row">
-  <button class="dnav-btn" id="btn-prev" onclick="moveDay(-1)">‹</button>
-  <div class="date-lbl" id="date-lbl"></div>
-  <button class="dnav-btn" id="btn-next" onclick="moveDay(1)">›</button>
-  <button class="today-btn" onclick="goToday()">오늘</button>
-</div>
-<!-- 확정 바: 항상 상단 고정 (할일 탭에서만 표시) -->
-<div class="conf-bar empty" id="conf-bar" style="display:none">
-  <div class="conf-top">
-    <div class="conf-info" id="conf-info">체크한 항목이 없어요</div>
-    <div class="conf-actions">
-      <button class="edit-mode-btn" id="edit-mode-btn" onclick="enterEditMode()">✏️ 수정</button>
-      <button class="conf-btn" id="conf-btn" onclick="confirmDay()" disabled>확정</button>
-    </div>
-  </div>
-</div>
-```
-
   </div>
 
   <div class="scroll-area">
@@ -363,156 +358,152 @@ input:checked+.toggle-sl:before{transform:translateX(18px);}
       </div>
       <div id="task-list"></div>
 
-```
-  <div class="admin-row" id="admin-row">
-    <button class="add-toggle-btn" id="toggle-add-btn" onclick="toggleAddForm()">+ 할일 추가</button>
-    <button class="add-toggle-btn" style="flex:none;padding:8px 12px" onclick="enterManageMode()">✏️ 항목 관리</button>
-  </div>
-  <div id="add-form-wrap" style="display:none;margin-top:7px">
-    <div class="add-form-box">
-      <div style="font-size:11px;color:#888;margin-bottom:5px">아이콘</div>
-      <div class="emoji-pick" id="emoji-pick"></div>
-      <div class="form-row">
-        <input type="text" class="fi-name" id="new-name" placeholder="할일 이름" autocomplete="off"/>
-        <input type="number" class="fi-pts" id="new-pts" placeholder="P" min="1" max="99"/>
-        <input type="text" class="fi-tag" id="new-tag" placeholder="시간"/>
-        <button class="form-submit" onclick="addTask()">추가</button>
+      <div class="admin-row" id="admin-row">
+        <button class="add-toggle-btn" id="toggle-add-btn" onclick="toggleAddForm()">+ 할일 추가</button>
+        <button class="add-toggle-btn" style="flex:none;padding:8px 12px" onclick="enterManageMode()">✏️ 항목 관리</button>
       </div>
-    </div>
-  </div>
-</div>
-
-<!-- 쿠폰샵 -->
-<div id="panel-shop" class="panel">
-  <div class="shop-bal-grid" id="shop-bal-grid"></div>
-  <div id="shop-list"></div>
-  <div class="adm-cat-area" id="adm-cat-area">
-    <button class="add-toggle-btn" id="toggle-cat-btn" onclick="toggleCatForm()">+ 카테고리 추가</button>
-    <div id="cat-form-wrap" style="display:none;margin-top:7px">
-      <div class="add-form-box">
-        <div class="form-row">
-          <input type="text" class="fi-name" id="new-cat" placeholder="카테고리 이름"/>
-          <button class="form-submit" onclick="addCategory()">추가</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- 쿠폰함 -->
-<div id="panel-wallet" class="panel">
-  <div class="wallet-grid">
-    <div class="wallet-col">
-      <div class="wallet-title wt-ian" id="wtitle-ian">🎟 이안</div>
-      <div class="wallet-list" id="wallet-ian"></div>
-    </div>
-    <div class="wallet-col">
-      <div class="wallet-title wt-logan" id="wtitle-logan">🎟 로건</div>
-      <div class="wallet-list" id="wallet-logan"></div>
-    </div>
-  </div>
-</div>
-
-<!-- 월별 달력 -->
-<div id="panel-cal" class="panel">
-  <div class="cal-hdr">
-    <button class="cal-nav-btn" onclick="calMove(-1)">‹</button>
-    <div class="cal-month-lbl" id="cal-lbl"></div>
-    <button class="cal-nav-btn" onclick="calMove(1)">›</button>
-    <div class="cal-who-btns">
-      <button class="cal-who-btn on-ian" id="cal-ian" onclick="calToggle('ian')">이안</button>
-      <button class="cal-who-btn on-logan" id="cal-logan" onclick="calToggle('logan')">로건</button>
-    </div>
-  </div>
-  <div class="cal-summary" id="cal-sum"></div>
-  <div class="cal-grid" id="cal-grid"></div>
-</div>
-
-<!-- 내역 -->
-<div id="panel-history" class="panel">
-  <div class="hist-filter">
-    <button class="hf-btn on-earn" id="hf-earn" onclick="toggleHistFilter('earn')">✓ 적립</button>
-    <button class="hf-btn on-spend" id="hf-spend" onclick="toggleHistFilter('spend')">✓ 사용</button>
-    <button class="hf-btn" id="hf-detail" onclick="toggleHistFilter('detail')">상세 내역</button>
-    <button class="hf-btn" onclick="setHistFilter('all')" style="margin-left:auto">전체 보기</button>
-  </div>
-  <div id="history-list"></div>
-</div>
-
-<!-- 옵션 -->
-<div id="panel-options" class="panel">
-  <div class="opt-sec">
-    <div class="opt-title">앱 설정</div>
-    <div class="opt-row" style="flex-direction:column;align-items:stretch;gap:8px;cursor:default">
-      <div style="display:flex;flex-direction:column;gap:6px">
-        <div><div class="opt-lbl" style="margin-bottom:4px">앱 제목</div><input type="text" id="opt-title" style="width:100%;padding:7px 9px;border:1px solid #d3d1c7;border-radius:8px;font-size:13px;-webkit-appearance:none" placeholder="가족 포인트"/></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div><div class="opt-sub" style="margin-bottom:3px">아이1 이름</div><input type="text" id="opt-k1n" style="width:100%;padding:6px 8px;border:1px solid #d3d1c7;border-radius:8px;font-size:13px;-webkit-appearance:none"/></div>
-          <div><div class="opt-sub" style="margin-bottom:3px">아이1 학년</div><input type="text" id="opt-k1s" style="width:100%;padding:6px 8px;border:1px solid #d3d1c7;border-radius:8px;font-size:13px;-webkit-appearance:none"/></div>
-          <div><div class="opt-sub" style="margin-bottom:3px">아이2 이름</div><input type="text" id="opt-k2n" style="width:100%;padding:6px 8px;border:1px solid #d3d1c7;border-radius:8px;font-size:13px;-webkit-appearance:none"/></div>
-          <div><div class="opt-sub" style="margin-bottom:3px">아이2 학년</div><input type="text" id="opt-k2s" style="width:100%;padding:6px 8px;border:1px solid #d3d1c7;border-radius:8px;font-size:13px;-webkit-appearance:none"/></div>
-        </div>
-        <button onclick="saveAppOpts()" style="padding:8px;border-radius:9px;border:none;background:#1D9E75;color:#fff;font-size:13px;font-weight:700;cursor:pointer;-webkit-appearance:none">저장</button>
-      </div>
-    </div>
-  </div>
-  <div class="opt-sec">
-    <div class="opt-title">날짜 이동</div>
-    <div class="opt-row"><div><div class="opt-lbl">과거 날짜 이동</div><div class="opt-sub">과거 날짜 기록 확인·수정</div></div><label class="toggle-sw"><input type="checkbox" id="opt-past" onchange="saveOpts()"><span class="toggle-sl"></span></label></div>
-    <div class="opt-row"><div><div class="opt-lbl">미래 날짜 이동</div><div class="opt-sub">오늘 이후 날짜로 이동</div></div><label class="toggle-sw"><input type="checkbox" id="opt-future" onchange="saveOpts()"><span class="toggle-sl"></span></label></div>
-  </div>
-  <div class="opt-sec">
-    <div class="opt-title">관리자 모드</div>
-    <div class="opt-row"><div><div class="opt-lbl">관리자 모드</div><div class="opt-sub">할일·쿠폰 추가·삭제·수정 / 데이터 초기화</div></div><label class="toggle-sw"><input type="checkbox" id="opt-admin" onchange="toggleAdminMode()"><span class="toggle-sl"></span></label></div>
-    <div id="gas-area" style="display:none;margin-top:4px">
-      <div class="opt-row" style="flex-direction:column;align-items:stretch;gap:7px;cursor:default">
-        <div>
-          <div class="opt-lbl" style="margin-bottom:4px">Google Apps Script URL</div>
-          <div class="opt-sub" style="margin-bottom:6px">구글 스프레드시트 동기화 경로 — 비워두면 기본값 사용</div>
-          <div style="display:flex;gap:5px;align-items:center">
-            <input type="url" id="opt-gas-url" style="flex:1;padding:7px 9px;border:1px solid #d3d1c7;border-radius:8px;font-size:12px;-webkit-appearance:none" placeholder="https://script.google.com/macros/s/.../exec"/>
-            <button onclick="copyGasUrl()" title="URL 복사" style="padding:6px 8px;border-radius:8px;border:1px solid #d3d1c7;background:#fff;cursor:pointer;font-size:14px;flex-shrink:0;-webkit-appearance:none">📋</button>
-            <button onclick="openGasScript()" title="Apps Script 열기" style="padding:6px 8px;border-radius:8px;border:1px solid #9FE1CB;background:#E1F5EE;color:#085041;cursor:pointer;font-size:13px;font-weight:700;flex-shrink:0;-webkit-appearance:none">⚡</button>
+      <div id="add-form-wrap" style="display:none;margin-top:7px">
+        <div class="add-form-box">
+          <div style="font-size:11px;color:#888;margin-bottom:5px">아이콘</div>
+          <div class="emoji-pick" id="emoji-pick"></div>
+          <div class="form-row">
+            <input type="text" class="fi-name" id="new-name" placeholder="할일 이름" autocomplete="off"/>
+            <input type="number" class="fi-pts" id="new-pts" placeholder="P" min="1" max="99"/>
+            <input type="text" class="fi-tag" id="new-tag" placeholder="시간"/>
+            <button class="form-submit" onclick="addTask()">추가</button>
           </div>
         </div>
-        <div>
-          <div class="opt-lbl" style="margin-bottom:4px">스프레드시트 ID</div>
-          <div class="opt-sub" style="margin-bottom:6px">Step 3에서 입력한 시트 ID — URL의 /d/ 뒤 긴 문자열</div>
-          <div style="display:flex;gap:5px;align-items:center">
-            <input type="text" id="opt-sheet-id" style="flex:1;padding:7px 9px;border:1px solid #d3d1c7;border-radius:8px;font-size:12px;-webkit-appearance:none" placeholder="1BxiMVs0XRA5nFMdKvBdBZjg..."/>
-            <button onclick="copySheetId()" title="ID 복사" style="padding:6px 8px;border-radius:8px;border:1px solid #d3d1c7;background:#fff;cursor:pointer;font-size:14px;flex-shrink:0;-webkit-appearance:none">📋</button>
-            <button onclick="openSheet()" title="스프레드시트 열기" style="padding:6px 10px;border-radius:8px;border:1px solid #85B7EB;background:#E6F1FB;color:#1565C0;cursor:pointer;font-size:13px;font-weight:700;flex-shrink:0;-webkit-appearance:none">📊</button>
+      </div>
+    </div>
+
+    <!-- 쿠폰샵 -->
+    <div id="panel-shop" class="panel">
+      <div class="shop-bal-grid" id="shop-bal-grid"></div>
+      <div id="shop-list"></div>
+      <div class="adm-cat-area" id="adm-cat-area">
+        <button class="add-toggle-btn" id="toggle-cat-btn" onclick="toggleCatForm()">+ 카테고리 추가</button>
+        <div id="cat-form-wrap" style="display:none;margin-top:7px">
+          <div class="add-form-box">
+            <div class="form-row">
+              <input type="text" class="fi-name" id="new-cat" placeholder="카테고리 이름"/>
+              <button class="form-submit" onclick="addCategory()">추가</button>
+            </div>
           </div>
-        </div>
-        <div>
-          <div class="opt-lbl" style="margin-bottom:4px">백업 보관 기간</div>
-          <div class="opt-sub" style="margin-bottom:6px">매일 자정 백업 — 0이면 무제한 보관</div>
-          <div style="display:flex;gap:6px;align-items:center">
-            <input type="number" id="opt-backup-days" min="0" max="365" style="width:80px;padding:7px 9px;border:1px solid #d3d1c7;border-radius:8px;font-size:13px;-webkit-appearance:none" placeholder="30"/>
-            <span style="font-size:13px;color:#888">일</span>
-            <span style="font-size:11px;color:#aaa">(0 = 무제한)</span>
-          </div>
-        </div>
-        <div style="display:flex;gap:6px">
-          <button onclick="saveGasUrl()" style="flex:1;padding:7px;border-radius:8px;border:none;background:#1D9E75;color:#fff;font-size:13px;font-weight:700;cursor:pointer;-webkit-appearance:none">저장</button>
-          <button onclick="testGasUrl()" style="flex:1;padding:7px;border-radius:8px;border:1px solid #d3d1c7;background:#fff;font-size:13px;font-weight:600;cursor:pointer;-webkit-appearance:none">연결 테스트</button>
         </div>
       </div>
     </div>
-  </div>
-  <div class="opt-sec">
-    <div class="opt-title">데이터</div>
-    <div class="opt-row" style="cursor:pointer" onclick="resetAll()"><div><div class="opt-lbl" style="color:#c0392b">전체 데이터 초기화</div><div class="opt-sub">모든 포인트·내역·쿠폰함 삭제</div></div><span style="color:#ccc;font-size:18px">›</span></div>
-  </div>
-  <div style="text-align:center;font-size:11px;color:#ccc;padding:1rem 0">가족 포인트 앱 v5.0</div>
-</div>
-```
 
+    <!-- 쿠폰함 -->
+    <div id="panel-wallet" class="panel">
+      <div class="wallet-grid">
+        <div class="wallet-col">
+          <div class="wallet-title wt-ian" id="wtitle-ian">🎟 이안</div>
+          <div class="wallet-list" id="wallet-ian"></div>
+        </div>
+        <div class="wallet-col">
+          <div class="wallet-title wt-logan" id="wtitle-logan">🎟 로건</div>
+          <div class="wallet-list" id="wallet-logan"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 월별 달력 -->
+    <div id="panel-cal" class="panel">
+      <div class="cal-hdr">
+        <button class="cal-nav-btn" onclick="calMove(-1)">‹</button>
+        <div class="cal-month-lbl" id="cal-lbl"></div>
+        <button class="cal-nav-btn" onclick="calMove(1)">›</button>
+        <div class="cal-who-btns">
+          <button class="cal-who-btn on-ian" id="cal-ian" onclick="calToggle('ian')">이안</button>
+          <button class="cal-who-btn on-logan" id="cal-logan" onclick="calToggle('logan')">로건</button>
+        </div>
+      </div>
+      <div class="cal-summary" id="cal-sum"></div>
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+
+    <!-- 내역 -->
+    <div id="panel-history" class="panel">
+      <div class="hist-filter">
+        <button class="hf-btn on-earn" id="hf-earn" onclick="toggleHistFilter('earn')">✓ 적립</button>
+        <button class="hf-btn on-spend" id="hf-spend" onclick="toggleHistFilter('spend')">✓ 사용</button>
+        <button class="hf-btn" id="hf-detail" onclick="toggleHistFilter('detail')">상세 내역</button>
+        <button class="hf-btn" onclick="setHistFilter('all')" style="margin-left:auto">전체 보기</button>
+      </div>
+      <div id="history-list"></div>
+    </div>
+
+    <!-- 옵션 -->
+    <div id="panel-options" class="panel">
+      <div class="opt-sec">
+        <div class="opt-title">앱 설정</div>
+        <div class="opt-row" style="flex-direction:column;align-items:stretch;gap:8px;cursor:default">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div><div class="opt-lbl" style="margin-bottom:4px">앱 제목</div><input type="text" id="opt-title" style="width:100%;padding:7px 9px;border:1px solid #d3d1c7;border-radius:8px;font-size:13px;-webkit-appearance:none" placeholder="가족 포인트"/></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div><div class="opt-sub" style="margin-bottom:3px">아이1 이름</div><input type="text" id="opt-k1n" style="width:100%;padding:6px 8px;border:1px solid #d3d1c7;border-radius:8px;font-size:13px;-webkit-appearance:none"/></div>
+              <div><div class="opt-sub" style="margin-bottom:3px">아이1 학년</div><input type="text" id="opt-k1s" style="width:100%;padding:6px 8px;border:1px solid #d3d1c7;border-radius:8px;font-size:13px;-webkit-appearance:none"/></div>
+              <div><div class="opt-sub" style="margin-bottom:3px">아이2 이름</div><input type="text" id="opt-k2n" style="width:100%;padding:6px 8px;border:1px solid #d3d1c7;border-radius:8px;font-size:13px;-webkit-appearance:none"/></div>
+              <div><div class="opt-sub" style="margin-bottom:3px">아이2 학년</div><input type="text" id="opt-k2s" style="width:100%;padding:6px 8px;border:1px solid #d3d1c7;border-radius:8px;font-size:13px;-webkit-appearance:none"/></div>
+            </div>
+            <button onclick="saveAppOpts()" style="padding:8px;border-radius:9px;border:none;background:#1D9E75;color:#fff;font-size:13px;font-weight:700;cursor:pointer;-webkit-appearance:none">저장</button>
+          </div>
+        </div>
+      </div>
+      <div class="opt-sec">
+        <div class="opt-title">날짜 이동</div>
+        <div class="opt-row"><div><div class="opt-lbl">과거 날짜 이동</div><div class="opt-sub">과거 날짜 기록 확인·수정</div></div><label class="toggle-sw"><input type="checkbox" id="opt-past" onchange="saveOpts()"><span class="toggle-sl"></span></label></div>
+        <div class="opt-row"><div><div class="opt-lbl">미래 날짜 이동</div><div class="opt-sub">오늘 이후 날짜로 이동</div></div><label class="toggle-sw"><input type="checkbox" id="opt-future" onchange="saveOpts()"><span class="toggle-sl"></span></label></div>
+      </div>
+      <div class="opt-sec">
+        <div class="opt-title">관리자 모드</div>
+        <div class="opt-row"><div><div class="opt-lbl">관리자 모드</div><div class="opt-sub">할일·쿠폰 추가·삭제·수정 / 데이터 초기화</div></div><label class="toggle-sw"><input type="checkbox" id="opt-admin" onchange="toggleAdminMode()"><span class="toggle-sl"></span></label></div>
+        <div id="gas-area" style="display:none;margin-top:4px">
+          <div class="opt-row" style="flex-direction:column;align-items:stretch;gap:7px;cursor:default">
+            <div>
+              <div class="opt-lbl" style="margin-bottom:4px">Google Apps Script URL</div>
+              <div class="opt-sub" style="margin-bottom:6px">구글 스프레드시트 동기화 경로 — 비워두면 기본값 사용</div>
+              <div style="display:flex;gap:5px;align-items:center">
+                <input type="url" id="opt-gas-url" style="flex:1;padding:7px 9px;border:1px solid #d3d1c7;border-radius:8px;font-size:12px;-webkit-appearance:none" placeholder="https://script.google.com/macros/s/.../exec"/>
+                <button onclick="copyGasUrl()" title="URL 복사" style="padding:6px 8px;border-radius:8px;border:1px solid #d3d1c7;background:#fff;cursor:pointer;font-size:14px;flex-shrink:0;-webkit-appearance:none">📋</button>
+                <button onclick="openGasScript()" title="Apps Script 열기" style="padding:6px 8px;border-radius:8px;border:1px solid #9FE1CB;background:#E1F5EE;color:#085041;cursor:pointer;font-size:13px;font-weight:700;flex-shrink:0;-webkit-appearance:none">⚡</button>
+              </div>
+            </div>
+            <div>
+              <div class="opt-lbl" style="margin-bottom:4px">스프레드시트 ID</div>
+              <div class="opt-sub" style="margin-bottom:6px">Step 3에서 입력한 시트 ID — URL의 /d/ 뒤 긴 문자열</div>
+              <div style="display:flex;gap:5px;align-items:center">
+                <input type="text" id="opt-sheet-id" style="flex:1;padding:7px 9px;border:1px solid #d3d1c7;border-radius:8px;font-size:12px;-webkit-appearance:none" placeholder="1BxiMVs0XRA5nFMdKvBdBZjg..."/>
+                <button onclick="copySheetId()" title="ID 복사" style="padding:6px 8px;border-radius:8px;border:1px solid #d3d1c7;background:#fff;cursor:pointer;font-size:14px;flex-shrink:0;-webkit-appearance:none">📋</button>
+                <button onclick="openSheet()" title="스프레드시트 열기" style="padding:6px 10px;border-radius:8px;border:1px solid #85B7EB;background:#E6F1FB;color:#1565C0;cursor:pointer;font-size:13px;font-weight:700;flex-shrink:0;-webkit-appearance:none">📊</button>
+              </div>
+            </div>
+            <div>
+              <div class="opt-lbl" style="margin-bottom:4px">백업 보관 기간</div>
+              <div class="opt-sub" style="margin-bottom:6px">매일 자정 백업 — 0이면 무제한 보관</div>
+              <div style="display:flex;gap:6px;align-items:center">
+                <input type="number" id="opt-backup-days" min="0" max="365" style="width:80px;padding:7px 9px;border:1px solid #d3d1c7;border-radius:8px;font-size:13px;-webkit-appearance:none" placeholder="30"/>
+                <span style="font-size:13px;color:#888">일</span>
+                <span style="font-size:11px;color:#aaa">(0 = 무제한)</span>
+              </div>
+            </div>
+            <div style="display:flex;gap:6px">
+              <button onclick="saveGasUrl()" style="flex:1;padding:7px;border-radius:8px;border:none;background:#1D9E75;color:#fff;font-size:13px;font-weight:700;cursor:pointer;-webkit-appearance:none">저장</button>
+              <button onclick="testGasUrl()" style="flex:1;padding:7px;border-radius:8px;border:1px solid #d3d1c7;background:#fff;font-size:13px;font-weight:600;cursor:pointer;-webkit-appearance:none">연결 테스트</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="opt-sec">
+        <div class="opt-title">데이터</div>
+        <div class="opt-row" style="cursor:pointer" onclick="resetAll()"><div><div class="opt-lbl" style="color:#c0392b">전체 데이터 초기화</div><div class="opt-sub">모든 포인트·내역·쿠폰함 삭제</div></div><span style="color:#ccc;font-size:18px">›</span></div>
+      </div>
+      <div style="text-align:center;font-size:11px;color:#ccc;padding:1rem 0">가족 포인트 앱 v5.0</div>
+    </div>
   </div>
 </div>
 
 <!-- 확인 다이얼로그 -->
-
 <div class="confirm-overlay" id="cfm-overlay">
   <div class="confirm-box">
     <h3 id="cfm-title">확인</h3>
@@ -630,7 +621,7 @@ function manualSync(){
     }else if(!isOnline){
       toast('오프라인 상태예요. 인터넷 연결을 확인해주세요.');
     }else{
-      toast('⚠ 동기화 실패. 잠시 후 ↻ 새로고침을 눌러주세요.');
+      toast('⚠ 동기화 실패. GAS 재배포 또는 권한을 확인해주세요.');
     }
   });
 }
@@ -687,42 +678,58 @@ function syncLoad(onDone){
     return;
   }
   setSyncStatus('syncing');
-  fetch(getGasUrl()+'?t='+Date.now())
-    .then(function(r){return r.text();})
-    .then(function(text){
-      if(!text||text.trim()===''||text.trim()==='null'){
+  // JSONP 방식으로 CORS 우회
+  var cbName='_gasCb'+Date.now();
+  var script=document.createElement('script');
+  var done=false;
+  var timer=setTimeout(function(){
+    if(done)return;done=true;
+    delete window[cbName];
+    if(script.parentNode)script.parentNode.removeChild(script);
+    console.error('[Sync] JSONP timeout');
+    setSyncStatus('error');
+    if(onDone)onDone(false);
+  },10000);
+  window[cbName]=function(raw){
+    if(done)return;done=true;
+    clearTimeout(timer);
+    delete window[cbName];
+    if(script.parentNode)script.parentNode.removeChild(script);
+    try{
+      var text=typeof raw==='string'?raw:JSON.stringify(raw);
+      if(!text||text==='null'||text==='""'){
         setSyncStatus('local');
         if(onDone)onDone(false);return;
       }
-      try{
-        var remote=JSON.parse(text);
-        var remoteJSON=JSON.stringify(remote);
-        var localJSON=JSON.stringify(S);
-        if(remoteJSON!==localJSON){
-          S=remote;
-          S.opts.admin=false; // 관리자 모드는 서버에서 가져와도 항상 false로 시작
-          save();
-          lastSyncedJSON=remoteJSON;
-          setSyncStatus('loaded');
-        }else{
-          lastSyncedJSON=localJSON;
-          setSyncStatus('online');
-        }
-      }catch(e){setSyncStatus('local');}
-      if(onDone)onDone(true);
-    })
-    .catch(function(err){
-      // CORS/네트워크 오류 구분
-      var msg=err&&err.message?err.message:'';
-      if(msg.indexOf('CORS')>-1||msg.indexOf('fetch')>-1||msg.indexOf('Failed')>-1){
-        setSyncStatus('error');
-        // 파일을 직접 열지 않고 Artifact로 열면 CORS 차단됨
-        console.warn('[Sync] CORS 차단 가능성. HTML 파일을 직접 다운로드해서 열어주세요.');
+      var remote=JSON.parse(text);
+      var remoteJSON=JSON.stringify(remote);
+      var localJSON=JSON.stringify(S);
+      if(remoteJSON!==localJSON){
+        S=remote;
+        S.opts.admin=false;
+        save();
+        lastSyncedJSON=remoteJSON;
+        setSyncStatus('loaded');
       }else{
-        setSyncStatus('offline');
+        lastSyncedJSON=localJSON;
+        setSyncStatus('online');
       }
+      if(onDone)onDone(true);
+    }catch(e){
+      console.error('[Sync] parse error',e);
+      setSyncStatus('local');
       if(onDone)onDone(false);
-    });
+    }
+  };
+  script.src=getGasUrl()+'?callback='+cbName+'&t='+Date.now();
+  script.onerror=function(){
+    if(done)return;done=true;
+    clearTimeout(timer);
+    delete window[cbName];
+    setSyncStatus('error');
+    if(onDone)onDone(false);
+  };
+  document.head.appendChild(script);
 }
 
 /* syncSave: 데이터 변경 시 로컬 즉시 저장 + 서버 디바운스 저장 (1.5초) */
@@ -747,7 +754,8 @@ function syncSave(){
       lastSyncedJSON=uploadJSON;
       setSyncStatus('saved');
     })
-    .catch(function(){
+    .catch(function(err){
+      console.error('[Sync] save 실패:', err&&err.message?err.message:'network error');
       setSyncStatus('error');
     });
   },1500);
@@ -2010,6 +2018,5 @@ syncLoad(function(){
   scheduleMidnight();
 });
 </script>
-
 </body>
 </html>
