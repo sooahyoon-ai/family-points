@@ -570,7 +570,7 @@ input:checked+.toggle-sl:before{transform:translateX(18px);}
     </div>
     <div class="mfield">
       <label>표시 요일</label>
-      <div style="display:flex;gap:4px;margin-top:4px;margin-bottom:4px">
+      <div id="modal-day-btns" style="display:flex;gap:4px;margin-top:4px;margin-bottom:4px">
         <button class="day-btn" data-dow="0">일</button>
         <button class="day-btn" data-dow="1">월</button>
         <button class="day-btn" data-dow="2">화</button>
@@ -586,7 +586,7 @@ input:checked+.toggle-sl:before{transform:translateX(18px);}
     </div>
     <div class="mfield">
       <label>대상 아이</label>
-      <div style="display:flex;gap:6px;margin-top:4px">
+      <div id="modal-who-btns" style="display:flex;gap:6px;margin-top:4px">
         <button class="who-btn" data-who="both" onclick="setWho('both')">둘 다</button>
         <button class="who-btn" data-who="ian" onclick="setWho('ian')" style="color:#1565C0;border-color:#85B7EB">이안만</button>
         <button class="who-btn" data-who="logan" onclick="setWho('logan')" style="color:#9A5C00;border-color:#FAC775">로건만</button>
@@ -1413,7 +1413,7 @@ function renderTasks(){
       var tw=t.who||'both';
       var passed=isDeadlinePassed(t);
 
-      html+='<div class="task-item'+(isM?' is-edit':'')+'" data-id="'+t.id+'"';
+      html+='<div class="task-item'+((isM||isMod)?' is-edit':'')+'" data-id="'+t.id+'"';
       html+=' draggable="'+(isM?'true':'false')+'"';
       html+=' ondragstart="taskDragStart(event)"';
       html+=' ondragend="taskDragEnd(event)"';
@@ -1469,11 +1469,11 @@ function renameGroup(input){var ci=parseInt(input.getAttribute('data-ci'));var o
 function deleteGroup(ci){var name=S.customGroups[ci];confirm2('그룹 삭제','"'+name+'" 그룹을 삭제할까요? 해당 그룹의 할일은 추가 그룹으로 이동됩니다.','삭제',true,function(){S.tasks.forEach(function(t){if(t.group===name)t.group='➕ 추가';});S.customGroups.splice(ci,1);syncSave();renderGroupList();renderTasks();toast('그룹 삭제됨');});}
 
 /* 할일 수정 모달 */
-function openTaskModal(id){if(!isAdmin())return;var t=null;for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].id===id){t=S.tasks[i];break;}}if(!t)return;mTaskId=id;mSelEmoji=t.icon;var gSel=document.getElementById('m-group');gSel.innerHTML=getGroups().map(function(g){return '<option value="'+g+'"'+(g===(t.group||'➕ 추가')?' selected':'')+'>'+g+'</option>';}).join('');document.getElementById('m-name').value=t.name;document.getElementById('m-pts').value=t.pts;document.getElementById('m-tag').value=t.tag||'';document.getElementById('m-deadline').value=t.deadline||'';var days=t.days&&t.days.length?t.days:[0,1,2,3,4,5,6];document.querySelectorAll('.day-btn').forEach(function(btn){var dow=parseInt(btn.getAttribute('data-dow'));btn.className='day-btn'+(days.indexOf(dow)>-1?' on':'');btn.onclick=function(){toggleDayBtn(this);};});var who=t.who||'both';document.querySelectorAll('.who-btn').forEach(function(btn){btn.className='who-btn'+(btn.getAttribute('data-who')===who?' on':'');});renderEmoji('modal-emoji',t.icon,function(e){mSelEmoji=e;});document.getElementById('task-modal').classList.add('show');}
+function openTaskModal(id){if(!isAdmin())return;var t=null;for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].id===id){t=S.tasks[i];break;}}if(!t)return;mTaskId=id;mSelEmoji=t.icon;var gSel=document.getElementById('m-group');gSel.innerHTML=getGroups().map(function(g){return '<option value="'+g+'"'+(g===(t.group||'➕ 추가')?' selected':'')+'>'+g+'</option>';}).join('');document.getElementById('m-name').value=t.name;document.getElementById('m-pts').value=t.pts;document.getElementById('m-tag').value=t.tag||'';document.getElementById('m-deadline').value=t.deadline||'';var days=t.days&&t.days.length?t.days:[0,1,2,3,4,5,6];document.querySelectorAll('#modal-day-btns .day-btn').forEach(function(btn){var dow=parseInt(btn.getAttribute('data-dow'));btn.className='day-btn'+(days.indexOf(dow)>-1?' on':'');btn.onclick=function(){toggleDayBtn(this);};});var who=t.who||'both';document.querySelectorAll('#modal-who-btns .who-btn').forEach(function(btn){btn.className='who-btn'+(btn.getAttribute('data-who')===who?' on':'');});renderEmoji('modal-emoji',t.icon,function(e){mSelEmoji=e;});document.getElementById('task-modal').classList.add('show');}
 function toggleDayBtn(btn){btn.classList.toggle('on');}
-function setAllDays(on){document.querySelectorAll('.day-btn').forEach(function(b){if(on)b.classList.add('on');else b.classList.remove('on');});}
-function setWho(who){document.querySelectorAll('.who-btn').forEach(function(b){b.className='who-btn'+(b.getAttribute('data-who')===who?' on':'');});}
-function saveTaskModal(){if(!mTaskId)return;var name=document.getElementById('m-name').value.trim();var pts=parseInt(document.getElementById('m-pts').value);var tag=document.getElementById('m-tag').value.trim();if(!name||!pts)return;var days=[];document.querySelectorAll('.day-btn.on').forEach(function(b){days.push(parseInt(b.getAttribute('data-dow')));});if(!days.length)days=[0,1,2,3,4,5,6];var who='both';document.querySelectorAll('.who-btn.on').forEach(function(b){who=b.getAttribute('data-who');});for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].id===mTaskId){S.tasks[i].name=name;S.tasks[i].pts=pts;S.tasks[i].icon=mSelEmoji;S.tasks[i].group=document.getElementById('m-group').value||'➕ 추가';S.tasks[i].tag=tag;S.tasks[i].days=days;S.tasks[i].who=who;S.tasks[i].deadline=document.getElementById('m-deadline').value||'';break;}}syncSave();closeModal('task-modal');renderTasks();toast('수정됨');}
+function setAllDays(on){document.querySelectorAll('#modal-day-btns .day-btn').forEach(function(b){if(on)b.classList.add('on');else b.classList.remove('on');});}
+function setWho(who){document.querySelectorAll('#modal-who-btns .who-btn').forEach(function(b){b.className='who-btn'+(b.getAttribute('data-who')===who?' on':'');});}
+function saveTaskModal(){if(!mTaskId)return;var name=document.getElementById('m-name').value.trim();var pts=parseInt(document.getElementById('m-pts').value);var tag=document.getElementById('m-tag').value.trim();if(!name||!pts)return;var days=[];document.querySelectorAll('#modal-day-btns .day-btn.on').forEach(function(b){days.push(parseInt(b.getAttribute('data-dow')));});if(!days.length)days=[0,1,2,3,4,5,6];var who='both';document.querySelectorAll('#modal-who-btns .who-btn.on').forEach(function(b){who=b.getAttribute('data-who');});for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].id===mTaskId){S.tasks[i].name=name;S.tasks[i].pts=pts;S.tasks[i].icon=mSelEmoji;S.tasks[i].group=document.getElementById('m-group').value||'➕ 추가';S.tasks[i].tag=tag;S.tasks[i].days=days;S.tasks[i].who=who;S.tasks[i].deadline=document.getElementById('m-deadline').value||'';break;}}syncSave();closeModal('task-modal');renderTasks();toast('수정됨');}
 function deleteTaskModal(){if(!mTaskId)return;confirm2('항목 삭제','이 할일을 삭제할까요?','삭제',true,function(){S.tasks=S.tasks.filter(function(t){return t.id!==mTaskId;});syncSave();closeModal('task-modal');renderTasks();toast('삭제됨');});}
 
 /* 쿠폰샵 */
