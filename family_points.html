@@ -68,6 +68,7 @@ h1{font-size:15px;font-weight:700;text-align:center;margin-bottom:.5rem;color:#0
 .task-name{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .task-tag{font-size:10px;color:#999;}
 .task-pts{font-size:11px;font-weight:700;color:#1D9E75;white-space:nowrap;flex-shrink:0;}
+.deadline-passed{font-size:10px;color:#E57373;font-weight:700;white-space:nowrap;padding:2px 6px;border:1px solid #f5b8b8;border-radius:6px;background:#fff5f5;}
 .check-area{display:flex;align-items:center;gap:3px;flex-shrink:0;}
 .task-item.is-edit .check-area{display:none;}
 .edit-area{display:none;align-items:center;gap:3px;flex-shrink:0;}
@@ -251,6 +252,12 @@ input:checked+.toggle-sl:before{transform:translateX(18px);}
 .mb-cancel{background:#f1efe8;color:#5f5e5a;}
 .mb-del{background:#fff5f5;color:#c0392b;border:1px solid #f5b8b8 !important;}
 .mb-save{background:#1D9E75;color:#fff;}
+.day-btn{flex:1;padding:5px 0;border-radius:7px;border:1px solid #d3d1c7;background:#f5f5f3;cursor:pointer;font-size:12px;font-weight:600;-webkit-appearance:none;color:#888;}
+.day-btn.on{background:#1D9E75;border-color:#1D9E75;color:#fff;}
+.day-btn:first-child.on{background:#E57373;border-color:#E57373;}
+.day-btn:last-child.on{background:#82B8F0;border-color:#82B8F0;}
+.who-btn{flex:1;padding:7px;border-radius:8px;border:1px solid #d3d1c7;background:#f5f5f3;cursor:pointer;font-size:13px;font-weight:600;-webkit-appearance:none;color:#888;}
+.who-btn.on{background:#1a1a1a;border-color:#1a1a1a;color:#fff;}
 .sync-bar{position:fixed;top:0;left:0;right:0;height:3px;background:#1D9E75;transform:scaleX(0);transform-origin:left;transition:transform .3s;z-index:999;}
 .sync-bar.syncing{transform:scaleX(1);}
 .sync-status{font-size:10px;color:#aaa;white-space:nowrap;}
@@ -521,6 +528,37 @@ input:checked+.toggle-sl:before{transform:translateX(18px);}
     <div class="mfield"><label>이름</label><input type="text" id="m-name"/></div>
     <div class="mfield"><label>포인트</label><input type="number" id="m-pts" min="1" max="99"/></div>
     <div class="mfield"><label>시간 태그</label><input type="text" id="m-tag" placeholder="예: ~20:00"/></div>
+    <div class="mfield">
+      <label>오늘 마감 시간 <span style="font-weight:400;color:#aaa">(오늘만 적용 — 지나면 체크 비활성화)</span></label>
+      <div style="display:flex;gap:6px;align-items:center;margin-top:4px">
+        <input type="time" id="m-deadline" style="flex:1;padding:7px 9px;border:1px solid #d3d1c7;border-radius:8px;font-size:14px;-webkit-appearance:none"/>
+        <button onclick="document.getElementById('m-deadline').value=''" style="padding:6px 10px;border-radius:8px;border:1px solid #d3d1c7;background:#f5f5f3;font-size:12px;cursor:pointer;-webkit-appearance:none;color:#888">없음</button>
+      </div>
+    </div>
+    <div class="mfield">
+      <label>표시 요일</label>
+      <div style="display:flex;gap:4px;margin-top:4px;margin-bottom:4px">
+        <button class="day-btn" data-dow="0">일</button>
+        <button class="day-btn" data-dow="1">월</button>
+        <button class="day-btn" data-dow="2">화</button>
+        <button class="day-btn" data-dow="3">수</button>
+        <button class="day-btn" data-dow="4">목</button>
+        <button class="day-btn" data-dow="5">금</button>
+        <button class="day-btn" data-dow="6">토</button>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button onclick="setAllDays(true)" style="flex:1;padding:4px;border-radius:7px;border:1px solid #9FE1CB;background:#E1F5EE;color:#085041;font-size:11px;cursor:pointer;-webkit-appearance:none">전체 선택</button>
+        <button onclick="setAllDays(false)" style="flex:1;padding:4px;border-radius:7px;border:1px solid #d3d1c7;background:#f5f5f3;color:#888;font-size:11px;cursor:pointer;-webkit-appearance:none">전체 해제</button>
+      </div>
+    </div>
+    <div class="mfield">
+      <label>대상 아이</label>
+      <div style="display:flex;gap:6px;margin-top:4px">
+        <button class="who-btn" data-who="both" onclick="setWho('both')">둘 다</button>
+        <button class="who-btn" data-who="ian" onclick="setWho('ian')" style="color:#1565C0;border-color:#85B7EB">이안만</button>
+        <button class="who-btn" data-who="logan" onclick="setWho('logan')" style="color:#9A5C00;border-color:#FAC775">로건만</button>
+      </div>
+    </div>
     <div class="mbtns"><button class="mb-cancel" onclick="closeModal('task-modal')">취소</button><button class="mb-del" onclick="deleteTaskModal()">삭제</button><button class="mb-save" onclick="saveTaskModal()">저장</button></div>
   </div>
 </div>
@@ -563,20 +601,20 @@ input:checked+.toggle-sl:before{transform:translateX(18px);}
 var EMOJIS=['⭐','🌟','🏆','🎯','💪','🧹','🛁','📚','⏰','✏️','🌙','🥄','🧼','💆','📖','📕','🤝','😊','🍚','🎮','🎁','🍦','🏃','🎨','🎵','🌱','🐶','🚀'];
 var GROUPS=['🌅 아침','☀️ 낮','🌆 저녁','🌟 하루종일','🌙 취침','➕ 추가'];
 var DEF_TASKS=[
-  {id:'t4',icon:'⏰',name:'아침 7시 전 기상',pts:7,group:'🌅 아침',tag:'~07:00'},
-  {id:'t5',icon:'✏️',name:'아침에 숙제하기',pts:10,group:'🌅 아침',tag:'등교 전'},
-  {id:'t8',icon:'🧼',name:'외출 후 바로 손 씻기',pts:5,group:'☀️ 낮',tag:'외출 후'},
-  {id:'t7',icon:'🥄',name:'식사시간에 숟가락 놓기',pts:3,group:'☀️ 낮',tag:'식사마다'},
-  {id:'t14',icon:'🍚',name:'다 먹은 밥그릇 싱크대에',pts:3,group:'☀️ 낮',tag:'식사 후'},
-  {id:'t3',icon:'📚',name:'숙제 완료',pts:5,group:'🌆 저녁',tag:'~20:00'},
-  {id:'t2',icon:'🛁',name:'씻고 양치질',pts:5,group:'🌆 저녁',tag:'~20:30'},
-  {id:'t1',icon:'👕',name:'빨래 개기',pts:5,group:'🌆 저녁',tag:'저녁 중'},
-  {id:'t9',icon:'💆',name:'아빠 안마해주기',pts:5,group:'🌆 저녁',tag:'저녁 중'},
-  {id:'t11',icon:'📕',name:'글책 읽기 (100p당)',pts:5,group:'🌆 저녁',tag:'저녁 중'},
-  {id:'t10',icon:'📖',name:'영어책 읽기 (3번)',pts:5,group:'🌆 저녁',tag:'저녁 중'},
-  {id:'t12',icon:'🤝',name:'형·동생과 안 싸우기',pts:5,group:'🌟 하루종일',tag:'하루 내'},
-  {id:'t13',icon:'😊',name:'짜증 안 내기',pts:5,group:'🌟 하루종일',tag:'하루 내'},
-  {id:'t6',icon:'🌙',name:'저녁 10시 전 취침',pts:10,group:'🌙 취침',tag:'~22:00'},
+  {id:'t4',icon:'⏰',name:'아침 7시 전 기상',pts:7,group:'🌅 아침',tag:'~07:00',days:[0,1,2,3,4,5,6],who:'both'},
+  {id:'t5',icon:'✏️',name:'아침에 숙제하기',pts:10,group:'🌅 아침',tag:'등교 전',days:[1,2,3,4,5],who:'both'},
+  {id:'t8',icon:'🧼',name:'외출 후 바로 손 씻기',pts:5,group:'☀️ 낮',tag:'외출 후',days:[0,1,2,3,4,5,6],who:'both'},
+  {id:'t7',icon:'🥄',name:'식사시간에 숟가락 놓기',pts:3,group:'☀️ 낮',tag:'식사마다',days:[0,1,2,3,4,5,6],who:'both'},
+  {id:'t14',icon:'🍚',name:'다 먹은 밥그릇 싱크대에',pts:3,group:'☀️ 낮',tag:'식사 후',days:[0,1,2,3,4,5,6],who:'both'},
+  {id:'t3',icon:'📚',name:'숙제 완료',pts:5,group:'🌆 저녁',tag:'~20:00',days:[1,2,3,4,5],who:'both'},
+  {id:'t2',icon:'🛁',name:'씻고 양치질',pts:5,group:'🌆 저녁',tag:'~20:30',days:[0,1,2,3,4,5,6],who:'both'},
+  {id:'t1',icon:'👕',name:'빨래 개기',pts:5,group:'🌆 저녁',tag:'저녁 중',days:[0,1,2,3,4,5,6],who:'both'},
+  {id:'t9',icon:'💆',name:'아빠 안마해주기',pts:5,group:'🌆 저녁',tag:'저녁 중',days:[0,1,2,3,4,5,6],who:'both'},
+  {id:'t11',icon:'📕',name:'글책 읽기 (100p당)',pts:5,group:'🌆 저녁',tag:'저녁 중',days:[0,1,2,3,4,5,6],who:'both'},
+  {id:'t10',icon:'📖',name:'영어책 읽기 (3번)',pts:5,group:'🌆 저녁',tag:'저녁 중',days:[0,1,2,3,4,5,6],who:'both'},
+  {id:'t12',icon:'🤝',name:'형·동생과 안 싸우기',pts:5,group:'🌟 하루종일',tag:'하루 내',days:[0,1,2,3,4,5,6],who:'both'},
+  {id:'t13',icon:'😊',name:'짜증 안 내기',pts:5,group:'🌟 하루종일',tag:'하루 내',days:[0,1,2,3,4,5,6],who:'both'},
+  {id:'t6',icon:'🌙',name:'저녁 10시 전 취침',pts:10,group:'🌙 취침',tag:'~22:00',days:[0,1,2,3,4,5,6],who:'both'},
 ];
 var DEF_COUPONS=[
   {id:'cat1',cat:'💰 용돈',items:[{id:'c1',name:'용돈 25,000원',pts:2500},{id:'c2',name:'용돈 10,000원',pts:1300},{id:'c3',name:'용돈 5,000원',pts:700}]},
@@ -586,7 +624,7 @@ var DEF_COUPONS=[
   {id:'cat5',cat:'🎉 특별 활동',items:[{id:'c11',name:'아빠랑 놀기 30분',pts:500},{id:'c12',name:'식사 메뉴 고르기',pts:1500},{id:'c13',name:'코스트코 가기',pts:1000},{id:'c14',name:'할머니집에서 밥 먹기',pts:500}]},
 ];
 
-var KEY='fp_v15';
+var KEY='fp_data'; // 버전 무관 고정 KEY — HTML 업데이트해도 데이터 유지
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 function getGasUrl(){
   // S.opts.gasUrl 설정값 우선, 없으면 하드코딩된 기본값 사용
@@ -601,11 +639,13 @@ var isOnline=navigator.onLine;
 window.addEventListener('online', function(){
   isOnline=true;
   setSyncStatus('online');
-  syncSave(); // 온라인 복구 시 즉시 업로드
+  syncSave();     // 온라인 복구 시 즉시 업로드
+  startPolling(); // 폴링 재시작
 });
 window.addEventListener('offline', function(){
   isOnline=false;
   setSyncStatus('offline');
+  stopPolling();  // 오프라인 시 폴링 중지
 });
 
 /* 동기화 상태 표시
@@ -613,16 +653,15 @@ window.addEventListener('offline', function(){
 function manualSync(){
   setSyncStatus('syncing');
   syncLoad(function(loaded){
-    if(loaded){
-      refreshDate();renderTasks();updateBoard();
-      if(document.getElementById('panel-shop').classList.contains('active'))renderShop();
-      if(document.getElementById('panel-wallet').classList.contains('active'))renderWallet();
-      toast('✓ 서버에서 최신 데이터를 불러왔어요');
-    }else if(!isOnline){
-      toast('오프라인 상태예요. 인터넷 연결을 확인해주세요.');
-    }else{
-      toast('⚠ 동기화 실패. GAS 재배포 또는 권한을 확인해주세요.');
+    refreshDate();renderTasks();updateBoard();
+    if(document.getElementById('panel-shop').classList.contains('active'))renderShop();
+    if(document.getElementById('panel-wallet').classList.contains('active'))renderWallet();
+    if(!isOnline){
+      toast('오프라인 상태예요. 로컬 데이터를 사용합니다.');
+    }else if(!loaded){
+      toast('⚠ 동기화 실패. 잠시 후 다시 시도해주세요.');
     }
+    // loaded 시 setSyncStatus에서 이미 표시됨
   });
 }
 var lastSyncTime=null; // 마지막 동기화 완료 시각
@@ -698,25 +737,36 @@ function syncLoad(onDone){
     try{
       var text=typeof raw==='string'?raw:JSON.stringify(raw);
       if(!text||text==='null'||text==='""'){
-        // 서버에 데이터 없음 = 첫 사용 or 아직 저장 안 됨
-        // 로컬 데이터 그대로 유지하고 서버에 올리기
-        console.log('[Sync] 서버 데이터 없음, 로컬 데이터 서버에 업로드');
+        // 서버에 데이터 없음 = 첫 사용
+        console.log('[Sync] 서버 데이터 없음, 로컬 사용');
         setSyncStatus('local');
-        syncSave(); // 로컬 데이터를 서버에 올림
         if(onDone)onDone(false);return;
       }
       var remote=JSON.parse(text);
-      var remoteJSON=JSON.stringify(remote);
-      var localJSON=JSON.stringify(S);
-      if(remoteJSON!==localJSON){
+      var remoteTS=remote.lastModified||0;
+      var localTS=S.lastModified||0;
+      remote.opts.admin=false;
+
+      if(remoteTS>=localTS){
+        // 서버가 더 최신이거나 같음 → 서버 데이터 사용
+        var remoteJSON=JSON.stringify(remote);
+        var localJSON=JSON.stringify(S);
         S=remote;
-        S.opts.admin=false;
-        save();
-        lastSyncedJSON=remoteJSON;
-        setSyncStatus('loaded');
+        // save() 대신 직접 저장 (lastModified 덮어쓰기 방지)
+        try{sSet(KEY,JSON.stringify(S));}catch(e){}
+        lastSyncedJSON=JSON.stringify(S);
+        if(remoteJSON!==localJSON){
+          setSyncStatus('loaded');
+          console.log('[Sync] 서버 최신 (서버:'+new Date(remoteTS).toLocaleTimeString()+' / 로컬:'+new Date(localTS).toLocaleTimeString()+')');
+        }else{
+          setSyncStatus('online');
+        }
       }else{
-        lastSyncedJSON=localJSON;
+        // 로컬이 더 최신 → 로컬 데이터 서버에 올리기
+        console.log('[Sync] 로컬 최신 (서버:'+new Date(remoteTS).toLocaleTimeString()+' / 로컬:'+new Date(localTS).toLocaleTimeString()+')');
         setSyncStatus('online');
+        syncSave(); // 로컬 → 서버 업로드
+        toast('⚠ 다른 기기 변경사항이 있어요. 로컬 최신본 저장 중…');
       }
       if(onDone)onDone(true);
     }catch(e){
@@ -763,6 +813,14 @@ function syncSave(){
     .catch(function(err){
       console.error('[Sync] save 실패:', err&&err.message?err.message:'network error');
       setSyncStatus('error');
+      // 재시도 1회만 (5초 후)
+      if(!syncSave._retrying){
+        syncSave._retrying=true;
+        setTimeout(function(){
+          syncSave._retrying=false;
+          if(navigator.onLine)syncSave();
+        },5000);
+      }
     });
   },1500);
 }
@@ -772,13 +830,19 @@ function sSet(k,v){try{localStorage.setItem(k,v);}catch(e){_mem[k]=v;}}
 function mkState(){
   return {ian:0,logan:0,dayData:{},coupons:JSON.parse(JSON.stringify(DEF_COUPONS)),
     wallet:{ian:[],logan:[]},history:[],tasks:JSON.parse(JSON.stringify(DEF_TASKS)),
-    opts:{past:true,future:false,admin:false,title:'이안 & 로건 포인트',k1n:'이안',k1s:'4학년',k2n:'로건',k2s:'1학년',gasUrl:'',sheetId:'',backupDays:30}};
+    lastModified:0,
+    opts:{past:true,future:false,admin:false,title:'이안 & 로건 포인트',k1n:'이안',k1s:'4학년',k2n:'로건',k2s:'1학원',gasUrl:'',sheetId:'',backupDays:30}};
 }
 function load(){
   try{
     var r=sGet(KEY);if(!r)return mkState();
     var s=JSON.parse(r);
     if(!s.tasks)s.tasks=JSON.parse(JSON.stringify(DEF_TASKS));
+    // 기존 task에 days/who 없으면 기본값
+    s.tasks.forEach(function(t){
+      if(!t.days)t.days=[0,1,2,3,4,5,6];
+      if(!t.who)t.who='both';
+    });
     if(!s.coupons)s.coupons=JSON.parse(JSON.stringify(DEF_COUPONS));
     if(typeof s.ian!=='number')s.ian=0;
     if(typeof s.logan!=='number')s.logan=0;
@@ -797,7 +861,10 @@ function load(){
     return s;
   }catch(e){return mkState();}
 }
-function save(){try{sSet(KEY,JSON.stringify(S));}catch(e){}}
+function save(){
+  S.lastModified=Date.now(); // 저장 시각 기록
+  try{sSet(KEY,JSON.stringify(S));}catch(e){}
+}
 
 var S=load();
 var vDate=new Date();
@@ -906,6 +973,35 @@ function monthSpend(who){
 
 /* ── 스코어보드 & 확정 바 ────────────────────────────── */
 function calcPts(obj){return S.tasks.reduce(function(s,t){return obj[t.id]?s+t.pts:s;},0);}
+
+function getTodayDow(){return vDate.getDay();} // 0=일 1=월 ... 6=토
+
+function isDeadlinePassed(t){
+  // 오늘 날짜 + 관리자 모드 아니면 마감 시간 체크
+  if(!isToday())return false; // 과거 날짜는 비활성화 안 함
+  if(isAdmin())return false;  // 관리자 모드는 항상 체크 가능
+  if(!t.deadline||t.deadline==='')return false;
+  var now=new Date();
+  var parts=t.deadline.split(':');
+  var deadline=new Date();
+  deadline.setHours(parseInt(parts[0]),parseInt(parts[1]),0,0);
+  return now>deadline;
+}
+
+function getVisibleTasks(){
+  // 현재 날짜 요일에 맞는 task만 반환
+  var dow=getTodayDow();
+  return S.tasks.filter(function(t){
+    var days=t.days&&t.days.length?t.days:[0,1,2,3,4,5,6];
+    return days.indexOf(dow)>-1;
+  });
+}
+
+function isTaskVisibleForWho(t,who){
+  // who: 'ian'|'logan' — task.who가 'both'이거나 일치하면 표시
+  var tw=t.who||'both';
+  return tw==='both'||tw===who;
+}
 
 function applyTodayPts(){
   var d=DD();
@@ -1079,8 +1175,8 @@ function updateBoard(){
 /* ── 체크 ────────────────────────────────────────────── */
 function checkAll(who){
   if(isConf()&&!modifyMode&&!isToday()){toast('"✏️ 수정" 버튼을 눌러주세요.');return;}
-  if(modifyMode){var mod=who==='ian'?DD().snap.modIan:DD().snap.modLogan;S.tasks.forEach(function(t){mod[t.id]=true;});syncSave();renderTasks();return;}
-  var obj={};S.tasks.forEach(function(t){obj[t.id]=true;});DD()[who]=obj;
+  if(modifyMode){var mod=who==='ian'?DD().snap.modIan:DD().snap.modLogan;getVisibleTasks().forEach(function(t){if(isTaskVisibleForWho(t,who))mod[t.id]=true;});syncSave();renderTasks();return;}
+  var vis=getVisibleTasks();var obj={};vis.forEach(function(t){if(isTaskVisibleForWho(t,who))obj[t.id]=true;});DD()[who]=obj;
   if(isToday())applyTodayPts();
   syncSave();renderTasks();toast(kn(who)+' 전체 체크');
 }
@@ -1213,8 +1309,9 @@ function renderTasks(){
     if(cls.indexOf('added')>-1)return '+ '+nm;return nm;
   }
 
+  var visTask=manageMode?S.tasks:getVisibleTasks();
   var grouped={};GROUPS.forEach(function(g){grouped[g]=[];});
-  S.tasks.forEach(function(t){var g=t.group||'➕ 추가';if(!grouped[g])grouped[g]=[];grouped[g].push(t);});
+  visTask.forEach(function(t){var g=t.group||'➕ 추가';if(!grouped[g])grouped[g]=[];grouped[g].push(t);});
 
   var html='';
   GROUPS.forEach(function(g){
@@ -1233,19 +1330,26 @@ function renderTasks(){
         +'<span class="drag-handle">⠿</span>'
         +'<input type="checkbox" class="task-cb" onchange="toggleSel(\''+t.id+'\',this)">'
         +'<div class="task-left"><div class="task-icon">'+t.icon+'</div>'
-        +'<div style="min-width:0"><div class="task-name">'+t.name+'</div>'
-        +(t.tag?'<div class="task-tag">'+t.tag+'</div>':'')+'</div></div>'
+        +'<div style="min-width:0"><div class="task-name">'+(isDeadlinePassed(t)?'<span style="color:#ccc">'+t.name+'</span>':t.name)+'</div>'
+        +(t.tag?'<div class="task-tag">'+t.tag+(t.deadline?' · ⏰'+t.deadline:'')+'</div>':t.deadline?'<div class="task-tag">⏰ '+t.deadline+'</div>':'')+'</div></div>'
         +'<span class="task-pts">+'+t.pts+'</span>';
       if(isMod){
-        html+='<div class="edit-area" style="display:flex">'
-          +'<button class="mbtn '+(mCI||'')+'" onclick="toggleModCheck(\'ian\',\''+t.id+'\')">'+mLI+'</button>'
-          +'<button class="mbtn '+(mCL||'')+'" onclick="toggleModCheck(\'logan\',\''+t.id+'\')">'+mLL+'</button>'
-          +'</div>';
+          html+='<div class="edit-area">';
+          if(tw==='both'||tw==='ian')html+='<button class="mbtn '+(mCI||'')+'" onclick="toggleModCheck(\'ian\',\''+t.id+'\')">'+mLI+'</button>';
+          if(tw==='both'||tw==='logan')html+='<button class="mbtn '+(mCL||'')+'" onclick="toggleModCheck(\'logan\',\''+t.id+'\')">'+mLL+'</button>';
+          html+='</div>';
       }else{
-        html+='<div class="check-area">'
-          +'<button class="cbtn '+(cCI||'')+'" onclick="toggleCheck(\'ian\',\''+t.id+'\')">'+cLI+'</button>'
-          +'<button class="cbtn '+(cCL||'')+'" onclick="toggleCheck(\'logan\',\''+t.id+'\')">'+cLL+'</button>'
-          +'</div>';
+        var tw=t.who||'both';
+        var passed=isDeadlinePassed(t);
+        html+='<div class="check-area">';
+        if(passed){
+          // 마감 시간 지남: 비활성화 버튼 표시
+          html+='<span class="deadline-passed">⏰ 마감</span>';
+        }else{
+          if(tw==='both'||tw==='ian')html+='<button class="cbtn '+(cCI||'')+'" onclick="toggleCheck(\'ian\',\''+t.id+'\')">'+cLI+'</button>';
+          if(tw==='both'||tw==='logan')html+='<button class="cbtn '+(cCL||'')+'" onclick="toggleCheck(\'logan\',\''+t.id+'\')">'+cLL+'</button>';
+        }
+        html+='</div>';
         if(isM)html+='<button class="item-edit-btn" onclick="openTaskModal(\''+t.id+'\')">수정</button>';
       }
       html+='</div>';
@@ -1265,7 +1369,7 @@ function addTask(){
   if(!isAdmin())return;
   var name=document.getElementById('new-name').value.trim(),pts=parseInt(document.getElementById('new-pts').value),tag=document.getElementById('new-tag').value.trim();
   if(!name){toast('이름을 입력해주세요');return;}if(!pts||pts<1){toast('포인트를 입력해주세요');return;}
-  S.tasks.push({id:'ct'+Date.now(),icon:selEmoji,name:name,pts:pts,group:'➕ 추가',tag:tag});
+  S.tasks.push({id:'ct'+Date.now(),icon:selEmoji,name:name,pts:pts,group:'➕ 추가',tag:tag,days:[0,1,2,3,4,5,6],who:'both'});
   document.getElementById('new-name').value='';document.getElementById('new-pts').value='';document.getElementById('new-tag').value='';
   syncSave();renderTasks();toast('할일 추가: '+name);
 }
@@ -1273,14 +1377,58 @@ function openTaskModal(id){
   if(!isAdmin())return;
   var t=null;for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].id===id){t=S.tasks[i];break;}}if(!t)return;
   mTaskId=id;mSelEmoji=t.icon;
-  document.getElementById('m-name').value=t.name;document.getElementById('m-pts').value=t.pts;document.getElementById('m-tag').value=t.tag||'';
-  renderEmoji('modal-emoji',t.icon,function(e){mSelEmoji=e;});document.getElementById('task-modal').classList.add('show');
+  document.getElementById('m-name').value=t.name;
+  document.getElementById('m-pts').value=t.pts;
+  document.getElementById('m-tag').value=t.tag||'';
+  document.getElementById('m-deadline').value=t.deadline||'';
+  // 요일 버튼 초기화
+  var days=t.days&&t.days.length?t.days:[0,1,2,3,4,5,6];
+  document.querySelectorAll('.day-btn').forEach(function(btn){
+    var dow=parseInt(btn.getAttribute('data-dow'));
+    btn.className='day-btn'+(days.indexOf(dow)>-1?' on':'');
+    btn.onclick=function(){toggleDayBtn(this);};
+  });
+  // who 버튼 초기화
+  var who=t.who||'both';
+  document.querySelectorAll('.who-btn').forEach(function(btn){
+    btn.className='who-btn'+(btn.getAttribute('data-who')===who?' on':'');
+  });
+  renderEmoji('modal-emoji',t.icon,function(e){mSelEmoji=e;});
+  document.getElementById('task-modal').classList.add('show');
+}
+function toggleDayBtn(btn){
+  btn.classList.toggle('on');
+}
+function setAllDays(on){
+  document.querySelectorAll('.day-btn').forEach(function(b){
+    if(on)b.classList.add('on');else b.classList.remove('on');
+  });
+}
+function setWho(who){
+  document.querySelectorAll('.who-btn').forEach(function(b){
+    b.className='who-btn'+(b.getAttribute('data-who')===who?' on':'');
+  });
 }
 function saveTaskModal(){
   if(!mTaskId)return;
-  var name=document.getElementById('m-name').value.trim(),pts=parseInt(document.getElementById('m-pts').value),tag=document.getElementById('m-tag').value.trim();
+  var name=document.getElementById('m-name').value.trim();
+  var pts=parseInt(document.getElementById('m-pts').value);
+  var tag=document.getElementById('m-tag').value.trim();
   if(!name||!pts)return;
-  for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].id===mTaskId){S.tasks[i].name=name;S.tasks[i].pts=pts;S.tasks[i].icon=mSelEmoji;S.tasks[i].tag=tag;break;}}
+  // 요일 수집
+  var days=[];
+  document.querySelectorAll('.day-btn.on').forEach(function(b){days.push(parseInt(b.getAttribute('data-dow')));});
+  if(!days.length)days=[0,1,2,3,4,5,6];
+  // who 수집
+  var who='both';
+  document.querySelectorAll('.who-btn.on').forEach(function(b){who=b.getAttribute('data-who');});
+  for(var i=0;i<S.tasks.length;i++){
+    if(S.tasks[i].id===mTaskId){
+      S.tasks[i].name=name;S.tasks[i].pts=pts;S.tasks[i].icon=mSelEmoji;
+      S.tasks[i].tag=tag;S.tasks[i].days=days;S.tasks[i].who=who;
+      S.tasks[i].deadline=document.getElementById('m-deadline').value||'';break;
+    }
+  }
   syncSave();closeModal('task-modal');renderTasks();toast('수정됨');
 }
 function deleteTaskModal(){
@@ -1808,6 +1956,14 @@ function fallbackCopy(text){
   try{document.execCommand('copy');toast('📋 URL 복사됨');}catch(e){toast('복사 실패 — 직접 선택해주세요');}
   document.body.removeChild(ta);
 }
+function saveCatEdit(){
+  var name=document.getElementById('mce-name').value.trim();
+  if(!name){toast('이름을 입력해주세요');return;}
+  for(var i=0;i<S.coupons.length;i++){
+    if(S.coupons[i].id===mEditCatId){S.coupons[i].cat=name;break;}
+  }
+  syncSave();closeModal('cat-edit-modal');renderShop();toast('카테고리 수정됨');
+}
 function saveGasUrl(){
   var url=document.getElementById('opt-gas-url').value.trim();
   var sid=document.getElementById('opt-sheet-id').value.trim();
@@ -1986,6 +2142,83 @@ function closeWelcome(){
   document.getElementById('welcome-overlay').classList.remove('show');
 }
 
+// ── 폴링: 30초마다 서버 타임스탬프 확인 → 다르면 자동 동기화 ────────────
+var POLL_INTERVAL = 30000; // 30초
+var pollTimer = null;
+
+function startPolling(){
+  stopPolling();
+  pollTimer=setInterval(function(){
+    if(!isOnline)return;
+    checkServerTs();
+  }, POLL_INTERVAL);
+}
+function stopPolling(){
+  if(pollTimer){clearInterval(pollTimer);pollTimer=null;}
+}
+
+function checkServerTs(){
+  // JSONP로 서버 타임스탬프만 가져와서 비교
+  var cbName='_tsCb'+Date.now();
+  var script=document.createElement('script');
+  var done=false;
+  var timer=setTimeout(function(){
+    if(done)return;done=true;
+    delete window[cbName];
+    if(script.parentNode)script.parentNode.removeChild(script);
+  },8000);
+  window[cbName]=function(raw){
+    if(done)return;done=true;
+    clearTimeout(timer);
+    delete window[cbName];
+    if(script.parentNode)script.parentNode.removeChild(script);
+    try{
+      var text=typeof raw==='string'?raw:JSON.stringify(raw);
+      if(!text||text==='null'||text==='""')return;
+      var remote=JSON.parse(text);
+      var remoteTS=remote.lastModified||0;
+      var localTS=S.lastModified||0;
+      if(remoteTS>localTS){
+        // 서버가 더 최신 → 자동 동기화
+        console.log('[Poll] 서버 변경 감지! 자동 동기화');
+        setSyncStatus('syncing');
+        syncLoad(function(loaded){
+          if(loaded){
+            refreshDate();renderTasks();updateBoard();
+            if(document.getElementById('panel-shop').classList.contains('active'))renderShop();
+            if(document.getElementById('panel-wallet').classList.contains('active'))renderWallet();
+            if(document.getElementById('panel-history').classList.contains('active'))renderHistory();
+            toast('🔄 다른 기기 변경사항이 동기화됐어요');
+          }
+        });
+      }
+    }catch(e){}
+  };
+  script.src=getGasUrl()+'?callback='+cbName+'&t='+Date.now();
+  script.onerror=function(){
+    if(done)return;done=true;
+    clearTimeout(timer);
+    delete window[cbName];
+  };
+  document.head.appendChild(script);
+}
+
+// 탭 포커스 복귀 시 즉시 확인
+document.addEventListener('visibilitychange',function(){
+  if(!document.hidden&&isOnline){
+    setTimeout(checkServerTs, 500);
+  }
+});
+
+// 1분마다 마감 시간 체크해서 할일 탭 갱신
+setInterval(function(){
+  if(isToday()&&!isAdmin()&&document.getElementById('panel-today').classList.contains('active')){
+    // 마감 시간이 있는 항목이 있으면 갱신
+    var hasDeadline=S.tasks.some(function(t){return t.deadline&&t.deadline!=='';});
+    if(hasDeadline)renderTasks();
+  }
+},60000); // 1분마다
+
 function scheduleMidnight(){
   /* 자정에 오늘 raw 자동 확정 후 다음 날 초기화 */
   var now=new Date();
@@ -2011,8 +2244,8 @@ function autoConfirmToday(){
 /* ── 초기 실행 ───────────────────────────────────────── */
 // 앱 시작: 서버 데이터 먼저 불러온 후 렌더링
 S.opts.admin=false; // 앱 시작 시 항상 비관리자로 시작
-// GAS URL이 설정 안 돼있으면 기본값으로 초기화
 if(!S.opts.gasUrl)S.opts.gasUrl='';
+// 온라인이면 서버에서 최신 데이터 복원 (HTML 업데이트해도 데이터 유지)
 setSyncStatus(isOnline?'syncing':'offline');
 syncLoad(function(){
   refreshDate();initTodayBase(true);renderTasks();
@@ -2020,6 +2253,7 @@ syncLoad(function(){
   document.getElementById('conf-bar').style.display='block';
   document.getElementById('date-nav-row').style.display='flex';
   scheduleMidnight();
+  startPolling(); // 30초 폴링 시작
 });
 </script>
 </body>
