@@ -766,7 +766,7 @@ function ucLight(who){
 }
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='0.3.1';
+var APP_VERSION='0.3.7';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 function getGasUrl(){
   // S.opts.gasUrl 설정값 우선, 없으면 하드코딩된 기본값 사용
@@ -1330,7 +1330,7 @@ function initTodayBase(showPopup){
       baseIan:{},baseLogan:{},
       ianPts:0,loganPts:0,
       ianOrig:null,loganOrig:null,
-      ianBefore:S.ian,loganBefore:S.logan,
+      ianBefore:recalcTotal('ian'),loganBefore:recalcTotal('logan'),
       modIan:null,modLogan:null
     };
     d.confirmed=false; // 아직 확정 안 됨
@@ -1375,15 +1375,13 @@ function updateAllBtns(){
 function updateBoard(){
   var d=DD(); // 반드시 맨 앞에 선언
   // 전체 포인트 = history 합산 + 오늘 미확정 체크
-  // 총포인트 = S.ian (날짜와 무관, confirmDay에서만 변경)
+  // 총포인트 = recalcTotal(history) + 오늘ian (단일공식)
   // 오늘 미확정 체크가 있으면 표시에만 더함
-  var trueIan=S.ian;
-  var trueLogan=S.logan;
-  // 총포인트: 실제 오늘 체크 항상 합산 (확정 후엔 d.ian={} 이므로 자동으로 0)
+  // 총포인트 = history 합산 + 오늘 미확정 체크 (단일공식)
   var realTodayKey=todayStr();
   var realTodayData=S.dayData[realTodayKey]||{ian:{},logan:{}};
-  trueIan+=calcPts(realTodayData.ian||{});
-  trueLogan+=calcPts(realTodayData.logan||{});
+  var trueIan=recalcTotal('ian')+calcPts(realTodayData.ian||{});
+  var trueLogan=recalcTotal('logan')+calcPts(realTodayData.logan||{});
   document.getElementById('ian-pts').textContent=trueIan.toLocaleString();var iWk=document.getElementById('ian-week-pts');if(iWk){var isThisWeek=dStr(vDate)===todayStr();iWk.textContent=(isThisWeek?'이번 주':'해당 주')+' +'+weekPts('ian').toLocaleString()+'P';}
   document.getElementById('logan-pts').textContent=trueLogan.toLocaleString();var lWk=document.getElementById('logan-week-pts');if(lWk){var isThisWeek2=dStr(vDate)===todayStr();lWk.textContent=(isThisWeek2?'이번 주':'해당 주')+' +'+weekPts('logan').toLocaleString()+'P';}
   var conf=d.confirmed,sn=d.snap;
@@ -1561,12 +1559,12 @@ function confirmDay(){
   if(ianCnt+loganCnt===0&&!d.confirmed)return;
   var now=new Date(),ts=vDate.toLocaleDateString('ko-KR')+' '+now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
   var prev=d.snap;
-  if(d.confirmed&&prev){S.ian=prev.ianBefore;S.logan=prev.loganBefore;}
+  // S.ian은 history 조작 완료 후 recalcTotal로 재계산 (confirmDay 끝에서 처리)
   d.snap={baseIan:Object.assign({},checkIan),baseLogan:Object.assign({},checkLogan),modIan:null,modLogan:null,
     ianPts:ianPts,loganPts:loganPts,
     ianOrig:null,
     loganOrig:null,
-    ianBefore:S.ian,loganBefore:S.logan};
+    ianBefore:recalcTotal('ian'),loganBefore:recalcTotal('logan')};
   if(ianPts>0||ianCnt>0||(d.confirmed&&prev)){
     var iN=S.tasks.filter(function(t){return checkIan[t.id];}).map(function(t){return t.icon+' '+t.name;});
     var iDetail=iN;
@@ -1583,7 +1581,7 @@ function confirmDay(){
       var vDateStr=dStr(vDate);
       S.history=S.history.filter(function(h){return !(h.who==='ian'&&h.type==='confirm'&&h.name.indexOf(vDateStr)>-1);});
     }
-    if(ianPts>0){S.ian+=ianPts;S.history.unshift({who:'ian',pts:ianPts,name:(d.confirmed?'재확정':'확정')+' '+dStr(vDate),detail:iDetail,type:'confirm',time:ts});}
+    if(ianPts>0){S.history.unshift({who:'ian',pts:ianPts,name:(d.confirmed?'재확정':'확정')+' '+dStr(vDate),detail:iDetail,type:'confirm',time:ts});}
   }
   if(loganPts>0||loganCnt>0||(d.confirmed&&prev)){
     var lN=S.tasks.filter(function(t){return checkLogan[t.id];}).map(function(t){return t.icon+' '+t.name;});
@@ -1599,10 +1597,10 @@ function confirmDay(){
       var vDateStr2=dStr(vDate);
       S.history=S.history.filter(function(h){return !(h.who==='logan'&&h.type==='confirm'&&h.name.indexOf(vDateStr2)>-1);});
     }
-    if(loganPts>0){S.logan+=loganPts;S.history.unshift({who:'logan',pts:loganPts,name:(d.confirmed?'재확정':'확정')+' '+dStr(vDate),detail:lDetail,type:'confirm',time:ts});}
+    if(loganPts>0){S.history.unshift({who:'logan',pts:loganPts,name:(d.confirmed?'재확정':'확정')+' '+dStr(vDate),detail:lDetail,type:'confirm',time:ts});}
   }
   d.confirmed=true;d.ian={};d.logan={};modifyMode=false;
-  syncSave();renderTasks();toast('✅ 포인트 적립 완료!');
+  syncSave();renderTasks();updateBoard();toast('✅ 포인트 적립 완료!');
 }
 
 /* ── 수정모드 ────────────────────────────────────────── */
@@ -2035,7 +2033,10 @@ function deleteTaskModal(){if(!mTaskId)return;confirm2('항목 삭제','이 할�
 
 /* 쿠폰샵 */
 function renderShop(){
-  var iP=S.ian,lP=S.logan;
+  var _rTodayKey=todayStr();
+  var _rTodayData=S.dayData[_rTodayKey]||{ian:{},logan:{}};
+  var iP=recalcTotal('ian')+calcPts(_rTodayData.ian||{});
+  var lP=recalcTotal('logan')+calcPts(_rTodayData.logan||{});
   var iSpend=monthSpend('ian'),lSpend=monthSpend('logan');
   var on=isAdmin();
   var isOne=userCount()<2;
@@ -2368,9 +2369,12 @@ function showWelcome(){
     ttsBtn.style.display=c2.tts?'inline-block':'none';
     ttsBtn.setAttribute('data-tts',c2.tts||'');
   }
+  var _wtk=todayStr();var _wtd=S.dayData[_wtk]||{ian:{},logan:{}};
+  var _wIan=recalcTotal('ian')+calcPts(_wtd.ian||{});
+  var _wLogan=recalcTotal('logan')+calcPts(_wtd.logan||{});
   document.getElementById('welcome-kids').innerHTML=
-    '<div class="welcome-kid"><div class="welcome-kid-name">'+kn('ian')+'</div><div class="welcome-kid-pts" style="color:'+uc1()+'">'+S.ian.toLocaleString()+'P</div></div>'+
-    (userCount()>=2?'<div class="welcome-kid"><div class="welcome-kid-name">'+kn('logan')+'</div><div class="welcome-kid-pts" style="color:'+uc2()+'">'+S.logan.toLocaleString()+'P</div></div>':'');
+    '<div class="welcome-kid"><div class="welcome-kid-name">'+kn('ian')+'</div><div class="welcome-kid-pts" style="color:'+uc1()+'">'+_wIan.toLocaleString()+'P</div></div>'+
+    (userCount()>=2?'<div class="welcome-kid"><div class="welcome-kid-name">'+kn('logan')+'</div><div class="welcome-kid-pts" style="color:'+uc2()+'">'+_wLogan.toLocaleString()+'P</div></div>':'');
   var emojis2=['🌅','☀️','🌟','⭐','🌈','💫','🌻','🎯'];
   document.getElementById('welcome-emoji').textContent=emojis2[Math.floor(Math.random()*emojis2.length)];
   document.getElementById('welcome-overlay').classList.add('show');
