@@ -2998,17 +2998,11 @@ function _initApp(){
   setTimeout(showWelcome,500);
 }
 
-if(S.opts.gasUrl){
-  // GAS URL 있으면 서버에서 최신 데이터 불러오기
-  setSyncStatus(isOnline?'syncing':'offline');
-  syncLoad(function(loaded){
-    _initApp();
-  });
-}else{
-  // GAS URL 없으면 로컬 데이터만 사용 (서버 없음)
-  setSyncStatus('local');
+// GAS URL 설정값 또는 하드코딩 기본값으로 항상 서버 동기화 시도
+setSyncStatus(isOnline?'syncing':'offline');
+syncLoad(function(loaded){
   _initApp();
-}
+});
 
 </script>
 </body>
