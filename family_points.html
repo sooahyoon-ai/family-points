@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v0.8.21 | Family Points App | Release 2026-05-15 -->
+<!-- 가족포인트앱 v0.8.23 | Family Points App | Release 2026-05-15 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -963,7 +963,7 @@ function ucLight(who){
 }
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='0.8.21';
+var APP_VERSION='0.8.23';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1QGHZexsJcZoVACwgoA7Ol29yKA3J9yIfQKWyNy6JzDI'; // 공용 임시 (처음 쓰는 사람용)
 function getDefaultSheetId(){
@@ -1125,7 +1125,12 @@ function syncLoad(onDone){
         // 로컬이 더 최신 → 로컬 데이터 서버에 올리기
         console.log('[Sync] 로컬 최신 (서버:'+new Date(remoteTS).toLocaleTimeString()+' / 로컬:'+new Date(localTS).toLocaleTimeString()+')');
         setSyncStatus('online');
-        syncSave(); // 로컬 → 서버 업로드
+        // 로컬 데이터가 실제로 있을 때만 서버에 올림 (빈 데이터 업로드 방지)
+        if(S.history&&S.history.length>0){
+          syncSave(); // 로컬 → 서버 업로드
+        }else{
+          console.log('[Sync] 로컬 history 없음 — 서버 덮어쓰기 방지');
+        }
         toast('⚠ 다른 기기 변경사항이 있어요. 로컬 최신본 저장 중…');
       }
       if(onDone)onDone(true);
@@ -1159,7 +1164,7 @@ function syncSave(){
     if(uploadJSON===lastSyncedJSON){console.log('[Sync] 변경없음 스킵');return;}
     console.log('[Sync] 서버 저장 시작, 크기:', uploadJSON.length);
     setSyncStatus('syncing');
-    fetch(getGasUrl(),{
+    fetch(getGasUrl()+'?sheetId='+encodeURIComponent(S.opts.sheetId||getDefaultSheetId()),{
       method:'POST',
       body:uploadJSON,
       headers:{'Content-Type':'text/plain'}
@@ -2826,6 +2831,7 @@ function doRestore(input){
       S=restored;
       patchState(S);
       save();
+      lastSyncedJSON=''; // 강제 동기화
       syncSave();
       refreshDate();renderTasks();updateBoard();loadOptsUI();
       toast('✅ 복구 완료! 포인트와 내역이 복원됐어요.');
