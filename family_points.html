@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v0.8.24 | Family Points App | Release 2026-05-15 -->
+<!-- 가족포인트앱 v0.8.26 | Family Points App | Release 2026-05-15 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -963,7 +963,7 @@ function ucLight(who){
 }
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='0.8.24';
+var APP_VERSION='0.8.26';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1QGHZexsJcZoVACwgoA7Ol29yKA3J9yIfQKWyNy6JzDI'; // 공용 임시 (처음 쓰는 사람용)
 function getDefaultSheetId(){
@@ -1115,7 +1115,7 @@ function syncLoad(onDone){
         S=remote;
         patchState(S); // 신규 필드 기본값 보완
         // save() 대신 직접 저장 (lastModified 덮어쓰기 방지)
-        try{sSet(KEY,JSON.stringify(S));}catch(e){}
+        saveLocal(); // lastModified 유지
         lastSyncedJSON=JSON.stringify(S);
         if(remoteJSON!==localJSON){
           setSyncStatus('loaded');
@@ -1276,8 +1276,13 @@ function load(){
     return s;
   }catch(e){return mkState();}
 }
+function saveLocal(){
+  // lastModified 건드리지 않고 로컬만 저장 (syncLoad 후 사용)
+  try{sSet(KEY,JSON.stringify(S));}catch(e){}
+}
 function save(){
-  S.lastModified=Date.now(); // 저장 시각 기록
+  // 실제 변경 시 호출 — lastModified 갱신
+  S.lastModified=Date.now();
   try{sSet(KEY,JSON.stringify(S));}catch(e){}
 }
 
@@ -1820,7 +1825,7 @@ function toggleCheck(who,tid){
     debouncedSyncSave(3000); // 5초 디바운스
   }
   // 과거 미확정 체크는 저장 안 함 (확정 시에만 저장)
-  save(); // 로컬은 즉시 저장
+  // save() 호출 안 함 — lastModified 보호
   renderTasks();
 }
 function toggleModCheck(who,tid){
