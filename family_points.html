@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v0.8.20 | Family Points App | Release 2026-05-15 -->
+<!-- 가족포인트앱 v0.8.21 | Family Points App | Release 2026-05-15 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -963,7 +963,7 @@ function ucLight(who){
 }
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='0.8.20';
+var APP_VERSION='0.8.21';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1QGHZexsJcZoVACwgoA7Ol29yKA3J9yIfQKWyNy6JzDI'; // 공용 임시 (처음 쓰는 사람용)
 function getDefaultSheetId(){
@@ -3060,42 +3060,7 @@ function scheduleMidnight(){
   var ms=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1,0,0,1).getTime()-now.getTime();
   setTimeout(function(){autoConfirmToday();scheduleMidnight();},ms);
 }
-function recoverMissingHistory(){
-  // 확정됐는데 history에 confirm 기록이 없는 날짜 자동 복구
-  var recovered=0;
-  Object.keys(S.dayData).forEach(function(ds){
-    var d=S.dayData[ds];
-    if(!d||!d.confirmed||!d.snap)return;
-    // 이날 history에 confirm 기록 있는지 확인
-    var hasIan=S.history.some(function(h){
-      return h.who==='ian'&&h.type==='confirm'&&h.name.indexOf(ds)>-1;
-    });
-    var hasLogan=S.history.some(function(h){
-      return h.who==='logan'&&h.type==='confirm'&&h.name.indexOf(ds)>-1;
-    });
-    var ianPts=d.snap.ianPts||0;
-    var loganPts=d.snap.loganPts||0;
-    // 날짜 형식: YYYY-M-D → "YYYY. M. D." 변환
-    var parts=ds.split('-');
-    var dateStr=parts[0]+'. '+parts[1]+'. '+parts[2]+'.';
-    if(ianPts>0&&!hasIan){
-      S.history.push({who:'ian',pts:ianPts,name:'확정 '+ds,type:'confirm',time:dateStr+' 23:59'});
-      recovered++;
-    }
-    if(loganPts>0&&!hasLogan){
-      S.history.push({who:'logan',pts:loganPts,name:'확정 '+ds,type:'confirm',time:dateStr+' 23:59'});
-      recovered++;
-    }
-  });
-  if(recovered>0){
-    // 날짜 순으로 정렬 (최신이 앞)
-    S.history.sort(function(a,b){
-      return new Date(b.time)-new Date(a.time);
-    });
-    console.log('[복구] '+recovered+'개 history 항목 복구됨');
-    save();
-  }
-}
+
 function autoConfirmToday(){
   // 오늘 날짜 확정: 체크한 포인트를 history에 추가
   var todayKey=todayStr();
@@ -3127,7 +3092,6 @@ S.opts.admin=false;
 if(!S.opts.gasUrl)S.opts.gasUrl='';
 
 function _initApp(){
-  recoverMissingHistory(); // 누락된 history 자동 복구
   refreshDate();initTodayBase(true);renderTasks();
   loadOptsUI();applyAdminUI();applyAppOpts();
   var vn=document.getElementById('version-num');if(vn)vn.textContent=APP_VERSION;
