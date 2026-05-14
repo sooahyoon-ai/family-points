@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v0.7.4 | Family Points App | Release 2026-05-14 -->
+<!-- 가족포인트앱 v0.7.5 | Family Points App | Release 2026-05-14 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -958,7 +958,7 @@ function ucLight(who){
 }
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='0.7.4';
+var APP_VERSION='0.7.5';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 function getGasUrl(){
   // S.opts.gasUrl 설정값 우선, 없으면 하드코딩된 기본값 사용
@@ -2965,8 +2965,8 @@ function autoConfirmToday(){save();vDate=new Date();refreshDate();initTodayBase(
 /* 초기 실행 */
 S.opts.admin=false;
 if(!S.opts.gasUrl)S.opts.gasUrl='';
-setSyncStatus(isOnline?'syncing':'offline');
-syncLoad(function(){
+
+function _initApp(){
   refreshDate();initTodayBase(true);renderTasks();
   loadOptsUI();applyAdminUI();applyAppOpts();
   var vn=document.getElementById('version-num');if(vn)vn.textContent=APP_VERSION;
@@ -2974,8 +2974,20 @@ syncLoad(function(){
   document.getElementById('date-nav-row').style.display='flex';
   scheduleMidnight();
   startPolling();
-  setTimeout(showWelcome,500); // 앱 시작 시 팝업
-});
+  setTimeout(showWelcome,500);
+}
+
+if(S.opts.gasUrl){
+  // GAS URL 있으면 서버에서 최신 데이터 불러오기
+  setSyncStatus(isOnline?'syncing':'offline');
+  syncLoad(function(loaded){
+    _initApp();
+  });
+}else{
+  // GAS URL 없으면 로컬 데이터만 사용 (서버 없음)
+  setSyncStatus('local');
+  _initApp();
+}
 
 </script>
 </body>
