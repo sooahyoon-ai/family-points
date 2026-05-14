@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v0.6.5 | Family Points App | Release 2026-05-14 -->
+<!-- 가족포인트앱 v0.7.0 | Family Points App | Release 2026-05-14 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -153,8 +153,8 @@ h1{font-size:15px;font-weight:700;text-align:center;margin-bottom:.5rem;color:#0
 .coupon-name{font-size:12px;margin-bottom:3px;}
 .coupon-cost{font-size:13px;font-weight:700;color:#993C1D;}
 .buy-btn{flex:1;padding:5px 0;border-radius:8px;border:1px solid #d3d1c7;background:#fff;cursor:pointer;font-size:11px;font-weight:700;-webkit-appearance:none;}
-.buy-ian{background:#EAF4FE;border-color:#82B8F0;color:var(--color1);}
-.buy-logan{background:#FEF3E2;border-color:#F5C06A;color:var(--color2);}
+.buy-ian{background:var(--color1-bg);border-color:var(--color1);color:var(--color1);}
+.buy-logan{background:var(--color2-bg);border-color:var(--color2);color:var(--color2);}
 .buy-btn:disabled{background:#f5f5f3;border-color:#e0e0d8;color:#ccc;opacity:1;cursor:default;}
 
 .buy-row{display:flex;gap:4px;margin-top:7px;}
@@ -179,7 +179,7 @@ h1{font-size:15px;font-weight:700;text-align:center;margin-bottom:.5rem;color:#0
 .wallet-item.used .wi-pts{color:#ccc;}
 .wi-btns{display:flex;gap:4px;justify-content:flex-end;}
 .use-btn{padding:5px 9px;border-radius:8px;border:1px solid #d3d1c7;background:#fff;cursor:pointer;font-size:11px;font-weight:700;white-space:nowrap;-webkit-appearance:none;}
-.use-ian{color:var(--color1);border-color:#85B7EB;}.use-logan{color:var(--color2);border-color:#FAC775;}
+.use-ian{color:var(--color1);border-color:var(--color1);background:var(--color1-bg);}.use-logan{color:var(--color2);border-color:var(--color2);background:var(--color2-bg);}
 .use-btn:disabled{color:#aaa;border-color:#e0e0d8;background:#f5f5f3;}
 .refund-btn{padding:5px 9px;border-radius:8px;border:1px solid #f5b8b8;background:#fff5f5;color:#c0392b;cursor:pointer;font-size:11px;font-weight:700;white-space:nowrap;-webkit-appearance:none;}
 .wallet-empty{font-size:13px;color:#aaa;padding:6px 0;}
@@ -193,7 +193,7 @@ h1{font-size:15px;font-weight:700;text-align:center;margin-bottom:.5rem;color:#0
 .hist-item{background:#fff;border:1px solid #e8e8e0;border-radius:10px;padding:9px 12px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:5px;}
 .hist-detail{font-size:11px;color:#888;margin-top:3px;white-space:normal;line-height:1.4;}
 .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:3px;}
-.dot-ian{background:#378ADD;}.dot-logan{background:#BA7517;}
+.dot-ian{background:var(--color1);}.dot-logan{background:var(--color2);}
 .p-plus{color:#1D9E75;font-weight:700;}.p-minus{color:#D85A30;font-weight:700;}
 .empty-st{text-align:center;color:#888;font-size:14px;padding:2rem 0;}
 
@@ -203,8 +203,8 @@ h1{font-size:15px;font-weight:700;text-align:center;margin-bottom:.5rem;color:#0
 .cal-month-lbl{font-size:15px;font-weight:700;flex:1;text-align:center;}
 .cal-who-btns{display:flex;gap:4px;}
 .cal-who-btn{padding:4px 10px;border-radius:7px;border:1px solid #d3d1c7;background:#fff;cursor:pointer;font-size:11px;font-weight:700;-webkit-appearance:none;color:#888;}
-.cal-who-btn.on-ian{background:#E6F1FB;border-color:#85B7EB;color:var(--color1);}
-.cal-who-btn.on-logan{background:#FAEEDA;border-color:#FAC775;color:var(--color2);}
+.cal-who-btn.on-ian{background:var(--color1-bg);border-color:var(--color1);color:var(--color1);}
+.cal-who-btn.on-logan{background:var(--color2-bg);border-color:var(--color2);color:var(--color2);}
 .cal-summary{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
 .cal-sum-card{background:#fff;border:1px solid #e0e0d8;border-radius:10px;padding:9px 12px;}
 .cal-sum-name{font-size:12px;font-weight:700;margin-bottom:6px;padding:5px 8px;border-radius:6px;text-align:center;}
@@ -230,8 +230,8 @@ h1{font-size:15px;font-weight:700;text-align:center;margin-bottom:.5rem;color:#0
 .cal-col-ian[style*='width:100%']{width:100% !important;}
 .cal-col-ian{flex:1;display:flex;flex-direction:column;gap:1px;align-items:stretch;background:#f0f6fd;border-radius:3px;padding:1px;}
 .cal-col-logan{flex:1;display:flex;flex-direction:column;gap:1px;align-items:stretch;background:#fdf8f0;border-radius:3px;padding:1px;}
-.cal-pts-ian{font-size:8px;font-weight:700;color:var(--color1);background:#EAF4FE;border-radius:2px;padding:1px 2px;text-align:center;}
-.cal-pts-logan{font-size:8px;font-weight:700;color:var(--color2);background:#FEF3E2;border-radius:2px;padding:1px 2px;text-align:center;}
+.cal-pts-ian{font-size:8px;font-weight:700;color:var(--color1);background:var(--color1-bg);border-radius:2px;padding:1px 2px;text-align:center;}
+.cal-pts-logan{font-size:8px;font-weight:700;color:var(--color2);background:var(--color2-bg);border-radius:2px;padding:1px 2px;text-align:center;}
 .cal-spend-ian{font-size:8px;font-weight:700;color:#c0392b;background:#fff5f5;border-radius:2px;padding:1px 2px;text-align:center;}
 .cal-spend-logan{font-size:8px;font-weight:700;color:#c0392b;background:#fff5f5;border-radius:2px;padding:1px 2px;text-align:center;}
 .cal-conf-dot{width:5px;height:5px;border-radius:50%;background:#1D9E75;margin:1px auto 0;}
@@ -954,7 +954,7 @@ function ucLight(who){
 }
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='0.6.5';
+var APP_VERSION='0.7.0';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 function getGasUrl(){
   // S.opts.gasUrl 설정값 우선, 없으면 하드코딩된 기본값 사용
@@ -962,6 +962,21 @@ function getGasUrl(){
   return url||GAS_URL;
 }
 var syncTimer=null;
+var _checkTimer=null; // 체크 디바운스 타이머
+var _pendingSync=false;
+
+function debouncedSyncSave(delay){
+  // delay ms 내 추가 액션 없으면 syncSave 실행
+  delay=delay||5000;
+  _pendingSync=true;
+  clearTimeout(_checkTimer);
+  _checkTimer=setTimeout(function(){
+    if(_pendingSync){
+      _pendingSync=false;
+      syncSave();
+    }
+  },delay);
+}
 var lastSyncedJSON='';
 var isOnline=navigator.onLine;
 
@@ -1106,7 +1121,7 @@ function syncLoad(onDone){
       if(onDone)onDone(false);
     }
   };
-  script.src=getGasUrl()+'?callback='+cbName+'&t='+Date.now();
+  var _sid=S.opts.sheetId?'&sheetId='+encodeURIComponent(S.opts.sheetId):'';script.src=getGasUrl()+'?callback='+cbName+'&t='+Date.now()+_sid;
   script.onerror=function(){
     if(done)return;done=true;
     clearTimeout(timer);
@@ -1281,6 +1296,14 @@ function kn(who){return who==='ian'?(S.opts.k1n||'이안'):(S.opts.k2n||'로건'
 function dStr(d){return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
 function todayStr(){return dStr(new Date());}
 function isToday(){return dStr(vDate)===todayStr();}
+function flushPendingSync(){
+  // 대기 중인 동기화 즉시 실행
+  if(_pendingSync){
+    clearTimeout(_checkTimer);
+    _pendingSync=false;
+    syncSave();
+  }
+}
 function onDateLeave(){
   if(manageMode)exitManageMode();
   if(modifyMode)exitModifyMode();
@@ -1752,9 +1775,10 @@ function toggleCheck(who,tid){
   }
   if(isToday()){
     applyTodayPts();
-    syncSave(); // 오늘 체크는 즉시 저장
+    debouncedSyncSave(5000); // 5초 디바운스
   }
   // 과거 미확정 체크는 저장 안 함 (확정 시에만 저장)
+  save(); // 로컬은 즉시 저장
   renderTasks();
 }
 function toggleModCheck(who,tid){
@@ -2523,6 +2547,13 @@ function applyAppOpts(){
   var root=document.documentElement;
   root.style.setProperty('--color1',uc1());
   root.style.setProperty('--color2',uc2());
+  // 배경용 연한 색 (15% 투명도)
+  function hexToRgba(hex,a){
+    var r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+    return 'rgba('+r+','+g+','+b+','+a+')';
+  }
+  try{root.style.setProperty('--color1-bg',hexToRgba(uc1(),0.12));}catch(e){root.style.setProperty('--color1-bg','#EAF4FE');}
+  try{root.style.setProperty('--color2-bg',hexToRgba(uc2(),0.12));}catch(e){root.style.setProperty('--color2-bg','#FEF3E2');}
   root.style.setProperty('--color1-light',uc1()+'22');
   root.style.setProperty('--color2-light',uc2()+'22');
   // 아바타 배경색 동적 적용
@@ -2565,7 +2596,7 @@ function resetAll(){if(!isAdmin()){toast('관리자 모드에서만 사용할 �
 
 /* 탭 */
 function showTab(t,el){
-  onDateLeave();
+  flushPendingSync();onDateLeave();
   // 할일 탭으로 돌아오면 항상 오늘로
   if(t==='today'){vDate=new Date();refreshDate();}
   if(manageMode)exitManageMode();if(modifyMode)exitModifyMode();document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('active');});document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});el.classList.add('active');document.getElementById('panel-'+t).classList.add('active');document.querySelector('.scroll-area').scrollTop=0;var isTodayTab=t==='today';document.getElementById('date-nav-row').style.display=isTodayTab?'flex':'none';document.getElementById('conf-bar').style.display=isTodayTab?'block':'none';if(isTodayTab&&isToday())setTimeout(showWelcome,200);if(t==='shop')renderShop();if(t==='wallet'){
@@ -2905,11 +2936,11 @@ function checkServerTs(){
       }
     }catch(e){}
   };
-  script2.src=getGasUrl()+'?callback='+cbName+'&t='+Date.now();
+  var _sid2=S.opts.sheetId?'&sheetId='+encodeURIComponent(S.opts.sheetId):'';script2.src=getGasUrl()+'?callback='+cbName+'&t='+Date.now()+_sid2;
   script2.onerror=function(){if(done2)return;done2=true;clearTimeout(timer2);delete window[cbName];};
   document.head.appendChild(script2);
 }
-document.addEventListener('visibilitychange',function(){if(!document.hidden&&isOnline)setTimeout(checkServerTs,500);});
+document.addEventListener('visibilitychange',function(){if(document.hidden){flushPendingSync();}else if(isOnline){setTimeout(checkServerTs,500);}});
 
 function scheduleMidnight(){
   var now=new Date();
