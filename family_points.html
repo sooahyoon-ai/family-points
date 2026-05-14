@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v0.5.9 | Family Points App | Release 2026-05-14 -->
+<!-- 가족포인트앱 v0.5.10 | Family Points App | Release 2026-05-14 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -815,7 +815,7 @@ function ucLight(who){
 }
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='0.5.9';
+var APP_VERSION='0.5.10';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 function getGasUrl(){
   // S.opts.gasUrl 설정값 우선, 없으면 하드코딩된 기본값 사용
@@ -1207,13 +1207,15 @@ function monthSpend(who){
   var yr=now.getFullYear(),mo=now.getMonth()+1;
   var total=0;
   S.history.forEach(function(h){
-    if(h.who===who&&h.pts<0&&h.type==='buy'){
-      // time 파싱: "YYYY. M. D. HH:MM" 형태
-      var m=h.time.match(/(\d+)\. (\d+)\. (\d+)/);
-      if(m&&parseInt(m[1])===yr&&parseInt(m[2])===mo)total+=Math.abs(h.pts);
-    }
+    if(h.who!==who)return;
+    if(h.type!=='buy'&&h.type!=='refund')return;
+    var m=h.time.match(/(\d+)\. (\d+)\. (\d+)/);
+    if(!m)return;
+    if(parseInt(m[1])!==yr||parseInt(m[2])!==mo)return;
+    if(h.type==='buy')total+=Math.abs(h.pts);
+    else if(h.type==='refund')total-=h.pts;
   });
-  return total;
+  return Math.max(0,total);
 }
 
 /* ── 스코어보드 & 확정 바 ────────────────────────────── */
@@ -2258,7 +2260,22 @@ function getWalletItem(who,id){for(var i=0;i<S.wallet[who].length;i++){if(S.wall
 /* 월별 달력 */
 function calToggle(who){if(who==='ian')calShowIan=!calShowIan;else calShowLogan=!calShowLogan;if(!calShowIan&&!calShowLogan){if(who==='ian')calShowIan=true;else calShowLogan=true;}document.getElementById('cal-ian').className='cal-who-btn'+(calShowIan?' on-ian':'');document.getElementById('cal-logan').className='cal-who-btn'+(calShowLogan?' on-logan':'');renderCal();}
 function calMove(n){calMonth+=n;if(calMonth>11){calMonth=0;calYear++;}if(calMonth<0){calMonth=11;calYear--;}renderCal();}
-function getDaySpend(who,ds){var total=0;S.history.forEach(function(h){if(h.who!==who||h.pts>=0||h.type!=='buy')return;var m=h.time.match(/(\d+)\. (\d+)\. (\d+)/);if(m){var hds=m[1]+'-'+parseInt(m[2])+'-'+parseInt(m[3]);if(hds===ds)total+=Math.abs(h.pts);}});return total;}
+function getDaySpend(who,ds){
+  var total=0;
+  S.history.forEach(function(h){
+    if(h.who!==who)return;
+    if(h.type!=='buy'&&h.type!=='refund')return;
+    var m=h.time.match(/(\d+)\. (\d+)\. (\d+)/);
+    if(!m)return;
+    var hds=m[1]+'-'+parseInt(m[2])+'-'+parseInt(m[3]);
+    if(hds!==ds)return;
+    // buy: pts 음수(-N), refund: pts 양수(+N)
+    // 사용금액 = buy절대값 - refund절대값
+    if(h.type==='buy')total+=Math.abs(h.pts);
+    else if(h.type==='refund')total-=h.pts;
+  });
+  return Math.max(0,total);
+}
 function renderCal(){var calIsOne=userCount()<2;var today=new Date();document.getElementById('cal-lbl').textContent=calYear+'년 '+(calMonth+1)+'월';var first=new Date(calYear,calMonth,1),last=new Date(calYear,calMonth+1,0),startDow=first.getDay();var ianEarn=0,loganEarn=0,ianSpendM=0,loganSpendM=0,ianDays=0,loganDays=0;var DOWS2=['일','월','화','수','목','금','토'];var grid=DOWS2.map(function(d){return '<div class="cal-dow">'+d+'</div>';}).join('');for(var i=0;i<startDow;i++)grid+='<div class="cal-cell empty"></div>';for(var day=1;day<=last.getDate();day++){var ds=calYear+'-'+(calMonth+1)+'-'+day;var dd=S.dayData[ds];var dow=(startDow+day-1)%7;var isT=(calYear===today.getFullYear()&&calMonth===today.getMonth()&&day===today.getDate());var iP2=0,lP2=0,iS2=getDaySpend('ian',ds),lS2=getDaySpend('logan',ds),isConfd2=false;if(dd&&dd.confirmed&&dd.snap){iP2=dd.snap.ianPts||0;lP2=dd.snap.loganPts||0;isConfd2=true;if(iP2>0)ianDays++;if(lP2>0)loganDays++;ianEarn+=iP2;loganEarn+=lP2;}ianSpendM+=iS2;loganSpendM+=lS2;var cls='cal-cell'+(isT?' today':'')+(dow===0?' sunday':dow===6?' saturday':'');var dataHtml='';if((calShowIan&&(iP2>0||iS2>0))||(calShowLogan&&(lP2>0||lS2>0))){dataHtml='<div class="cal-cell-data">';if(calShowIan){
         var ianColStyle=calIsOne?' style="width:100%"':'';
         dataHtml+='<div class="cal-col-ian"'+ianColStyle+'>';
