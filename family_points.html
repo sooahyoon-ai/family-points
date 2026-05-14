@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v0.8.3 | Family Points App | Release 2026-05-14 -->
+<!-- 가족포인트앱 v0.8.5 | Family Points App | Release 2026-05-14 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -564,7 +564,6 @@ input:checked+.toggle-sl:before{transform:translateX(18px);}
               </div>
             </div>
             <button onclick="saveAppOpts()" style="padding:8px;border-radius:9px;border:none;background:#1D9E75;color:#fff;font-size:13px;font-weight:700;cursor:pointer;-webkit-appearance:none">저장</button>
-          <button onclick="forceLoadFromServer()" style="padding:8px;border-radius:9px;border:1px solid #8E44AD;background:#F5EEF8;color:#6C3483;font-size:13px;font-weight:700;cursor:pointer;-webkit-appearance:none;margin-top:6px;width:100%">☁️ 서버에서 강제 불러오기</button>
 
           </div>
         </div>
@@ -620,7 +619,7 @@ input:checked+.toggle-sl:before{transform:translateX(18px);}
             </div>
           </div>
         </div>
-        <button onclick="forceLoadFromServer()" style="margin-top:10px;width:100%;padding:10px;border-radius:9px;border:1px solid #8E44AD;background:#F5EEF8;color:#6C3483;font-size:13px;font-weight:700;cursor:pointer;-webkit-appearance:none">☁️ 서버에서 강제 불러오기</button>
+        <button id="force-load-btn" onclick="forceLoadFromServer()" style="display:none;margin-top:10px;width:100%;padding:10px;border-radius:9px;border:1px solid #8E44AD;background:#F5EEF8;color:#6C3483;font-size:13px;font-weight:700;cursor:pointer;-webkit-appearance:none">☁️ 서버에서 강제 불러오기</button>
       </div>
       <div class="opt-sec">
         <div class="opt-title">데이터</div>
@@ -960,7 +959,7 @@ function ucLight(who){
 }
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='0.8.3';
+var APP_VERSION='0.8.5';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 function getGasUrl(){
   // S.opts.gasUrl 설정값 우선, 없으면 하드코딩된 기본값 사용
@@ -1098,9 +1097,7 @@ function syncLoad(onDone){
       var localTS=S.lastModified||0;
       remote.opts.admin=false;
 
-      // 로컬이 초기 빈 상태(lastModified=0)면 무조건 서버 우선
-      var localIsEmpty=(localTS===0||!sGet(KEY));
-      if(remoteTS>=localTS||localIsEmpty){
+      if(remoteTS>=localTS){
         // 서버가 더 최신이거나 로컬이 비어있음 → 서버 데이터 사용
         var remoteJSON=JSON.stringify(remote);
         var localJSON=JSON.stringify(S);
@@ -1366,6 +1363,8 @@ function applyAdminUI(){
   // body에 admin-mode 클래스 토글 (전체선택/해제 버튼 표시 제어)
   if(on&&isTodayActive){document.body.classList.add('admin-mode');}
   else{document.body.classList.remove('admin-mode');}
+  var flb=document.getElementById('force-load-btn');
+  if(flb)flb.style.display=on?'block':'none';
 }
 function toggleAdminMode(){
   S.opts.admin=document.getElementById('opt-admin').checked;
@@ -3047,9 +3046,10 @@ function _initApp(){
   setTimeout(showWelcome,500);
 }
 
-// GAS URL 설정값 또는 하드코딩 기본값으로 항상 서버 동기화 시도
+S.opts.admin=false;
+if(!S.opts.gasUrl)S.opts.gasUrl='';
 setSyncStatus(isOnline?'syncing':'offline');
-syncLoad(function(loaded){
+syncLoad(function(){
   _initApp();
 });
 
