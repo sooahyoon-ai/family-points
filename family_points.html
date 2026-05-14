@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v0.8.26 | Family Points App | Release 2026-05-15 -->
+<!-- 가족포인트앱 v0.8.28 | Family Points App | Release 2026-05-15 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -963,7 +963,7 @@ function ucLight(who){
 }
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='0.8.26';
+var APP_VERSION='0.8.28';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1QGHZexsJcZoVACwgoA7Ol29yKA3J9yIfQKWyNy6JzDI'; // 공용 임시 (처음 쓰는 사람용)
 function getDefaultSheetId(){
@@ -1822,7 +1822,7 @@ function toggleCheck(who,tid){
   }
   if(isToday()){
     applyTodayPts();
-    debouncedSyncSave(3000); // 5초 디바운스
+    debouncedSyncSave(1000); // 5초 디바운스
   }
   // 과거 미확정 체크는 저장 안 함 (확정 시에만 저장)
   // save() 호출 안 함 — lastModified 보호
@@ -2835,12 +2835,14 @@ function doRestore(input){
       var restored=JSON.parse(e.target.result);
       // lastModified를 현재 시간보다 크게 설정 (서버 덮어쓰기 방지)
       restored.lastModified=Date.now()+1000; // 1초 후 (서버보다 최신 보장)
+      restored.opts.admin=false; // 관리자 모드는 기기 세션 전용
       S=restored;
       patchState(S);
+      S.opts.admin=true; // 복구 후 관리자 모드 유지
       save();
       lastSyncedJSON=''; // 강제 동기화
       syncSave();
-      refreshDate();renderTasks();updateBoard();loadOptsUI();
+      refreshDate();renderTasks();updateBoard();loadOptsUI();applyAdminUI();
       toast('✅ 복구 완료! 포인트와 내역이 복원됐어요.');
     }catch(err){
       toast('❌ 파일 오류: 올바른 백업 파일을 선택해주세요.');
