@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v0.5.2 | Family Points App | Release 2026-05-14 -->
+<!-- 가족포인트앱 v0.5.9 | Family Points App | Release 2026-05-14 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -815,7 +815,7 @@ function ucLight(who){
 }
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='0.5.2';
+var APP_VERSION='0.5.9';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 function getGasUrl(){
   // S.opts.gasUrl 설정값 우선, 없으면 하드코딩된 기본값 사용
@@ -1160,7 +1160,8 @@ function moveDay(n){
 function goToday(){
   var wasToday=isToday();
   onDateLeave();vDate=new Date();refreshDate();renderTasks();
-  if(!wasToday)setTimeout(showWelcome,200); // 다른 날짜에서 오늘로 올 때만
+  if(wasToday)setTimeout(forceShowWelcome,200); // 오늘→오늘: 항상 팝업
+  else setTimeout(showWelcome,200); // 다른날→오늘: stop 체크 적용
 }
 function refreshDate(){
   var d=vDate,days=['일','월','화','수','목','금','토'];
@@ -2475,10 +2476,20 @@ function getTodayContentIdx(){
   var idx=(seed*2654435761)>>>0;
   return idx%DAILY_CONTENTS.length;
 }
+function forceShowWelcome(){
+  if(isAdmin())return;
+  // stop 체크 상태 보존하면서 팝업만 강제 표시
+  var wasChecked=document.getElementById('welcome-stop-today').checked;
+  showWelcomeContent();
+  document.getElementById('welcome-stop-today').checked=wasChecked;
+}
 function showWelcome(){
   if(isAdmin())return;
   var td=todayStr();
   try{if(localStorage.getItem('fp_welcome_stop')===td)return;}catch(e){}
+  showWelcomeContent();
+}
+function showWelcomeContent(){
   document.getElementById('welcome-stop-today').checked=false;
   var days2=['일요일','월요일','화요일','수요일','목요일','금요일','토요일'];
   var now=new Date();
@@ -2603,6 +2614,9 @@ function refreshWelcomeContent(){
 function closeWelcome(){
   if(document.getElementById('welcome-stop-today').checked){
     try{localStorage.setItem('fp_welcome_stop',todayStr());}catch(e){}
+  }else{
+    // 체크 해제 시 localStorage도 삭제
+    try{localStorage.removeItem('fp_welcome_stop');}catch(e){}
   }
   document.getElementById('welcome-overlay').classList.remove('show');
 }
@@ -2697,6 +2711,7 @@ syncLoad(function(){
   document.getElementById('date-nav-row').style.display='flex';
   scheduleMidnight();
   startPolling();
+  setTimeout(showWelcome,500); // 앱 시작 시 팝업
 });
 
 </script>
