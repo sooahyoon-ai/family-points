@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v0.8.17 | Family Points App | Release 2026-05-15 -->
+<!-- 가족포인트앱 v0.8.20 | Family Points App | Release 2026-05-15 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -25,7 +25,7 @@ h1{font-size:15px;font-weight:700;text-align:center;margin-bottom:.5rem;color:#0
 .kid-top{display:flex;align-items:center;justify-content:space-between;gap:6px;}
 .kid-left{display:flex;align-items:center;gap:7px;min-width:0;}
 .avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex-shrink:0;}
-.av-ian{background:#E6F1FB;color:#0C447C;}.av-logan{background:#FAEEDA;color:#633806;}
+.av-ian{background:#E6F1FB;color:#0C447C;}.av-logan{background:var(--color2-bg);color:var(--color2);}
 .kid-name{font-size:13px;font-weight:700;white-space:nowrap;}
 .kid-sub{font-size:10px;color:#888;}
 /* 오른쪽: 포인트 */
@@ -91,9 +91,9 @@ h1{font-size:15px;font-weight:700;text-align:center;margin-bottom:.5rem;color:#0
 .cbtn{padding:5px 0;border-radius:8px;border:1px solid #e0e0d8;background:#f5f5f3;cursor:pointer;font-size:11px;font-weight:700;white-space:nowrap;-webkit-appearance:none;color:#ccc;width:44px;text-align:center;flex-shrink:0;}
 .cbtn:disabled{cursor:default;opacity:.55;}
 .cbtn-expired{opacity:.55;}
-.cbtn.ian-sel{background:#EAF4FE;border-color:#82B8F0;color:var(--color1);}
+.cbtn.ian-sel{background:var(--color1-bg);border-color:var(--color1);color:var(--color1);}
 .cbtn.ian-conf{background:var(--color1);border-color:var(--color1);color:#fff;}
-.cbtn.logan-sel{background:#FEF3E2;border-color:#F5C06A;color:var(--color2);}
+.cbtn.logan-sel{background:var(--color2-bg);border-color:var(--color2);color:var(--color2);}
 .cbtn.logan-conf{background:var(--color2);border-color:var(--color2);color:#fff;}
 .mbtn{padding:5px 0;border-radius:8px;border:1px solid #e0e0d8;background:#f5f5f3;cursor:pointer;font-size:11px;font-weight:700;white-space:nowrap;-webkit-appearance:none;color:#ccc;width:44px;text-align:center;flex-shrink:0;}
 .mbtn:disabled{cursor:default;opacity:.55;}
@@ -218,14 +218,14 @@ h1{font-size:15px;font-weight:700;text-align:center;margin-bottom:.5rem;color:#0
 .cal-sum-days{font-size:10px;color:#aaa;margin-top:4px;}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
 .cal-dow{font-size:10px;font-weight:700;text-align:center;padding:3px 0;color:#888;}
-.cal-dow:first-child{color:#E57373;}.cal-dow:last-child{color:#82B8F0;}
+.cal-dow:first-child{color:#E57373;}.cal-dow:last-child{color:var(--color1);}
 .cal-cell{background:#fff;border:1px solid #f0efe8;border-radius:7px;padding:3px 2px;min-height:54px;display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer;}
 .cal-cell:active{background:#f5f5f3;}
 .cal-cell.empty{background:transparent;border-color:transparent;cursor:default;}
 .cal-cell.today{border-color:#1D9E75;background:#E1F5EE;}
 .cal-day-num{font-size:11px;font-weight:700;color:#333;}
 .cal-cell.sunday .cal-day-num{color:#E57373;}
-.cal-cell.saturday .cal-day-num{color:#82B8F0;}
+.cal-cell.saturday .cal-day-num{color:var(--color1);}
 .cal-cell-data{display:flex;gap:2px;width:100%;}
 .cal-col-ian[style*='width:100%']{width:100% !important;}
 .cal-col-ian{flex:1;display:flex;flex-direction:column;gap:1px;align-items:stretch;background:#f0f6fd;border-radius:3px;padding:1px;}
@@ -274,12 +274,12 @@ input:checked+.toggle-sl:before{transform:translateX(18px);}
 .day-btn{flex:1;padding:5px 0;border-radius:7px;border:1px solid #d3d1c7;background:#f5f5f3;cursor:pointer;font-size:12px;font-weight:600;-webkit-appearance:none;color:#888;}
 .day-btn.on{background:#1D9E75;border-color:#1D9E75;color:#fff;}
 .day-btn:first-child.on{background:#E57373;border-color:#E57373;}
-.day-btn:last-child.on{background:#82B8F0;border-color:#82B8F0;}
+.day-btn:last-child.on{background:var(--color1);border-color:var(--color1);}
 .who-btn{flex:1;padding:7px;border-radius:8px;border:1px solid #d3d1c7;background:#f5f5f3;cursor:pointer;font-size:13px;font-weight:600;-webkit-appearance:none;color:#888;}
 .who-btn[data-who="both"].on{background:#1a1a1a;border-color:#1a1a1a;color:#fff;}
-.who-ian{color:var(--color1);border-color:#85B7EB;}
+.who-ian{color:var(--color1);border-color:var(--color1);}
 .who-ian.on{background:var(--color1);border-color:var(--color1);color:#fff;}
-.who-logan{color:var(--color2);border-color:#FAC775;}
+.who-logan{color:var(--color2);border-color:var(--color2);}
 .who-logan.on{background:var(--color2);border-color:var(--color2);color:#fff;}
 .sync-bar{position:fixed;top:0;left:0;right:0;height:3px;background:#1D9E75;transform:scaleX(0);transform-origin:left;transition:transform .3s;z-index:999;}
 .sync-bar.syncing{transform:scaleX(1);}
@@ -670,12 +670,12 @@ input:checked+.toggle-sl:before{transform:translateX(18px);}
         <button onclick="document.getElementById('m-deadline').value='';toggleGraceField()" style="padding:6px 10px;border-radius:8px;border:1px solid #d3d1c7;background:#f5f5f3;font-size:12px;cursor:pointer;-webkit-appearance:none;color:#888">없음</button>
       </div>
     </div>
-    <div class="mfield" id="grace-field" style="display:none;border-top:1px dashed #FAC77588;padding-top:8px;margin-top:-4px">
+    <div class="mfield" id="grace-field" style="display:none;border-top:1px dashed var(--color2);padding-top:8px;margin-top:-4px">
       <label style="font-size:11px;color:#F5A623;font-weight:700">⏳ 유예 설정 <span style="font-weight:400;color:#aaa">(마감 후 감점 포인트로 허용)</span></label>
       <div style="display:flex;gap:6px;align-items:center;margin-top:4px">
-        <input type="time" id="m-grace-deadline" step="60" oninput="validateGraceTime()" onchange="validateGraceTime()" style="flex:1;padding:7px 9px;border:1px solid #FAC775;border-radius:8px;font-size:14px;-webkit-appearance:none"/>
+        <input type="time" id="m-grace-deadline" step="60" oninput="validateGraceTime()" onchange="validateGraceTime()" style="flex:1;padding:7px 9px;border:1px solid var(--color2);border-radius:8px;font-size:14px;-webkit-appearance:none"/>
         <button onclick="document.getElementById('m-grace-deadline').value=''" style="padding:6px 10px;border-radius:8px;border:1px solid #d3d1c7;background:#f5f5f3;font-size:12px;cursor:pointer;-webkit-appearance:none;color:#888">없음</button>
-        <input type="number" id="m-grace-pts" min="0" max="99" placeholder="P" style="width:55px;padding:7px 9px;border:1px solid #FAC775;border-radius:8px;font-size:14px;-webkit-appearance:none"/>
+        <input type="number" id="m-grace-pts" min="0" max="99" placeholder="P" style="width:55px;padding:7px 9px;border:1px solid var(--color2);border-radius:8px;font-size:14px;-webkit-appearance:none"/>
       </div>
     </div>
     <div class="mfield">
@@ -963,7 +963,7 @@ function ucLight(who){
 }
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='0.8.17';
+var APP_VERSION='0.8.20';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1QGHZexsJcZoVACwgoA7Ol29yKA3J9yIfQKWyNy6JzDI'; // 공용 임시 (처음 쓰는 사람용)
 function getDefaultSheetId(){
