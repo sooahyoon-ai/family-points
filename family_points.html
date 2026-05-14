@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v0.8.0 | Family Points App | Release 2026-05-14 -->
+<!-- 가족포인트앱 v0.8.3 | Family Points App | Release 2026-05-14 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -564,6 +564,7 @@ input:checked+.toggle-sl:before{transform:translateX(18px);}
               </div>
             </div>
             <button onclick="saveAppOpts()" style="padding:8px;border-radius:9px;border:none;background:#1D9E75;color:#fff;font-size:13px;font-weight:700;cursor:pointer;-webkit-appearance:none">저장</button>
+          <button onclick="forceLoadFromServer()" style="padding:8px;border-radius:9px;border:1px solid #8E44AD;background:#F5EEF8;color:#6C3483;font-size:13px;font-weight:700;cursor:pointer;-webkit-appearance:none;margin-top:6px;width:100%">☁️ 서버에서 강제 불러오기</button>
 
           </div>
         </div>
@@ -619,6 +620,7 @@ input:checked+.toggle-sl:before{transform:translateX(18px);}
             </div>
           </div>
         </div>
+        <button onclick="forceLoadFromServer()" style="margin-top:10px;width:100%;padding:10px;border-radius:9px;border:1px solid #8E44AD;background:#F5EEF8;color:#6C3483;font-size:13px;font-weight:700;cursor:pointer;-webkit-appearance:none">☁️ 서버에서 강제 불러오기</button>
       </div>
       <div class="opt-sec">
         <div class="opt-title">데이터</div>
@@ -958,7 +960,7 @@ function ucLight(who){
 }
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='0.8.0';
+var APP_VERSION='0.8.3';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 function getGasUrl(){
   // S.opts.gasUrl 설정값 우선, 없으면 하드코딩된 기본값 사용
@@ -1096,8 +1098,10 @@ function syncLoad(onDone){
       var localTS=S.lastModified||0;
       remote.opts.admin=false;
 
-      if(remoteTS>=localTS){
-        // 서버가 더 최신이거나 같음 → 서버 데이터 사용
+      // 로컬이 초기 빈 상태(lastModified=0)면 무조건 서버 우선
+      var localIsEmpty=(localTS===0||!sGet(KEY));
+      if(remoteTS>=localTS||localIsEmpty){
+        // 서버가 더 최신이거나 로컬이 비어있음 → 서버 데이터 사용
         var remoteJSON=JSON.stringify(remote);
         var localJSON=JSON.stringify(S);
         S=remote;
@@ -2832,6 +2836,51 @@ function clearSheetId(){
     var el=document.getElementById('opt-sheet-id');
     if(el)el.value='';
     toast('지웠어요. 저장 버튼을 눌러주세요.');
+  });
+}
+function forceLoadFromServer(){
+  if(!isAdmin()){toast('관리자 모드에서만 사용할 수 있어요.');return;}
+  confirm2('서버에서 강제 불러오기','서버 데이터로 현재 기기 데이터를 덮어씁니다.\n계속할까요?','불러오기',true,function(){
+    setSyncStatus('syncing');
+    var cbName='_gasCb'+Date.now();
+    var sc=document.createElement('script');
+    var done=false;
+    var timer=setTimeout(function(){
+      if(done)return;done=true;
+      delete window[cbName];
+      if(sc.parentNode)sc.parentNode.removeChild(sc);
+      toast('❌ 서버 연결 실패 (timeout)');
+      setSyncStatus('error');
+    },10000);
+    window[cbName]=function(raw){
+      if(done)return;done=true;
+      clearTimeout(timer);
+      delete window[cbName];
+      if(sc.parentNode)sc.parentNode.removeChild(sc);
+      try{
+        var text=typeof raw==='string'?raw:JSON.stringify(raw);
+        if(!text||text==='null'||text==='""'){
+          toast('❌ 서버에 데이터가 없어요');
+          setSyncStatus('error');
+          return;
+        }
+        var remote=JSON.parse(text);
+        remote.opts.admin=false;
+        S=remote;
+        patchState(S);
+        try{sSet(KEY,JSON.stringify(S));}catch(e){}
+        lastSyncedJSON=JSON.stringify(S);
+        setSyncStatus('loaded');
+        refreshDate();renderTasks();updateBoard();loadOptsUI();applyAppOpts();
+        toast('✅ 서버 데이터로 복원됐어요!');
+      }catch(err){
+        toast('❌ 데이터 오류: '+err);
+        setSyncStatus('error');
+      }
+    };
+    var _sid=S.opts.sheetId?'&sheetId='+encodeURIComponent(S.opts.sheetId):'';
+    sc.src=getGasUrl()+'?callback='+cbName+'&t='+Date.now()+_sid;
+    document.head.appendChild(sc);
   });
 }
 function showHelp(){
