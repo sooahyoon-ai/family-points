@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v0.8.8 | Family Points App | Release 2026-05-14 -->
+<!-- 가족포인트앱 v0.8.17 | Family Points App | Release 2026-05-15 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -590,10 +590,13 @@ input:checked+.toggle-sl:before{transform:translateX(18px);}
             </div>
 
             <div>
-              <div class="opt-lbl" style="margin-bottom:4px">스프레드시트 ID</div>
-              <div class="opt-sub" style="margin-bottom:6px">비워두면 기본 공용 DB 사용. 입력하면 개인 DB에 저장.</div>
+              <div class="opt-lbl" style="margin-bottom:4px">기본 스프레드시트 ID</div>
+              <div class="opt-sub" style="margin-bottom:6px">한 번 설정하면 저장. 비워두면 공용 임시 DB 사용.</div>
+              <input type="text" id="opt-base-sheet-id" style="width:100%;padding:7px 9px;border:1px solid #d3d1c7;border-radius:8px;font-size:12px;-webkit-appearance:none;box-sizing:border-box;margin-bottom:10px" placeholder="예: 1rHjta_5QdDjB9TT8..."/>
+              <div class="opt-lbl" style="margin-bottom:4px">개인 스프레드시트 ID</div>
+              <div class="opt-sub" style="margin-bottom:6px">기본값 대신 이 시트 사용. 비워두면 기본 시트 사용.</div>
               <div style="display:flex;gap:5px;align-items:center">
-                <input type="text" id="opt-sheet-id" style="flex:1;padding:7px 9px;border:1px solid #d3d1c7;border-radius:8px;font-size:12px;-webkit-appearance:none" placeholder="1BxiMVs0XRA5nFMdKvBdBZjg..."/>
+                <input type="text" id="opt-sheet-id" style="flex:1;padding:7px 9px;border:1px solid #d3d1c7;border-radius:8px;font-size:12px;-webkit-appearance:none" placeholder="비워두면 기본 DB 사용"/>
                 <button onclick="copySheetId()" title="ID 복사" style="padding:6px 8px;border-radius:8px;border:1px solid #d3d1c7;background:#fff;cursor:pointer;font-size:14px;flex-shrink:0;-webkit-appearance:none">📋</button>
                 <button onclick="clearSheetId()" title="ID 지우기" style="padding:6px 8px;border-radius:8px;border:1px solid #E57373;background:#FFF0F0;color:#c0392b;font-size:12px;cursor:pointer;-webkit-appearance:none;flex-shrink:0">🗑️</button>
               </div>
@@ -620,6 +623,7 @@ input:checked+.toggle-sl:before{transform:translateX(18px);}
           </div>
         </div>
         <button id="force-load-btn" onclick="forceLoadFromServer()" style="display:none;margin-top:10px;width:100%;padding:10px;border-radius:9px;border:1px solid #8E44AD;background:#F5EEF8;color:#6C3483;font-size:13px;font-weight:700;cursor:pointer;-webkit-appearance:none">☁️ 서버에서 강제 불러오기</button>
+        <button id="debug-btn" onclick="showDebugInfo()" style="display:none;margin-top:6px;width:100%;padding:8px;border-radius:9px;border:1px solid #aaa;background:#f5f5f3;color:#555;font-size:11px;cursor:pointer;-webkit-appearance:none">🔍 디버그 정보 보기</button>
       </div>
       <div class="opt-sec">
         <div class="opt-title">데이터</div>
@@ -959,8 +963,13 @@ function ucLight(who){
 }
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='0.8.8';
+var APP_VERSION='0.8.17';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
+var DEFAULT_SHEET_ID='1QGHZexsJcZoVACwgoA7Ol29yKA3J9yIfQKWyNy6JzDI'; // 공용 임시 (처음 쓰는 사람용)
+function getDefaultSheetId(){
+  // 기본 시트ID 설정값 우선, 없으면 하드코딩 공용 임시
+  return (S.opts.baseSheetId&&S.opts.baseSheetId.trim())||DEFAULT_SHEET_ID;
+}
 function getGasUrl(){
   // S.opts.gasUrl 설정값 우선, 없으면 하드코딩된 기본값 사용
   var url=S.opts&&S.opts.gasUrl&&S.opts.gasUrl.trim();
@@ -1126,7 +1135,7 @@ function syncLoad(onDone){
       if(onDone)onDone(false);
     }
   };
-  var _sid=S.opts.sheetId?'&sheetId='+encodeURIComponent(S.opts.sheetId):'';script.src=getGasUrl()+'?callback='+cbName+'&t='+Date.now()+_sid;
+  var _sidVal=S.opts.sheetId||getDefaultSheetId();var _sid='&sheetId='+encodeURIComponent(_sidVal);script.src=getGasUrl()+'?callback='+cbName+'&t='+Date.now()+_sid;
   script.onerror=function(){
     if(done)return;done=true;
     clearTimeout(timer);
@@ -1183,7 +1192,7 @@ function mkState(){
     wallet:{ian:[],logan:[]},history:[],tasks:JSON.parse(JSON.stringify(DEF_TASKS)),
     lastModified:0,
     customGroups:[],
-    opts:{past:true,future:false,admin:false,title:'이안 & 로건 포인트',k1n:'이안',k1s:'4학년',k2n:'로건',k2s:'1학원',gasUrl:'',sheetId:'',backupDays:30,parentName:'아빠',userCount:2,color1:'#1565C0',color2:'#9A5C00',weekStart:0,weekGoalIan:0,weekGoalLogan:0}};
+    opts:{past:true,future:false,admin:false,title:'이안 & 로건 포인트',k1n:'이안',k1s:'4학년',k2n:'로건',k2s:'1학원',gasUrl:'',sheetId:'',baseSheetId:'',backupDays:30,parentName:'아빠',userCount:2,color1:'#1565C0',color2:'#9A5C00',weekStart:0,weekGoalIan:0,weekGoalLogan:0}};
 }
 function patchState(s){
   // 신규 필드 없는 기존 데이터와 호환
@@ -1196,6 +1205,7 @@ function patchState(s){
   if(o.weekStart===undefined)o.weekStart=0;
   if(o.weekGoalIan===undefined)o.weekGoalIan=0;
   if(o.weekGoalLogan===undefined)o.weekGoalLogan=0;
+  if(o.baseSheetId===undefined)o.baseSheetId='';
   if(o.backupDays===undefined)o.backupDays=30;
   if(!o.gasUrl)o.gasUrl='';
   if(!o.sheetId)o.sheetId='';
@@ -1365,6 +1375,8 @@ function applyAdminUI(){
   else{document.body.classList.remove('admin-mode');}
   var flb=document.getElementById('force-load-btn');
   if(flb)flb.style.display=on?'block':'none';
+  var dbb=document.getElementById('debug-btn');
+  if(dbb)dbb.style.display=on?'block':'none';
 }
 function toggleAdminMode(){
   S.opts.admin=document.getElementById('opt-admin').checked;
@@ -2495,6 +2507,7 @@ function renderHistory(){applyHistFilterUI();var el=document.getElementById('his
 function saveOpts(){S.opts.past=document.getElementById('opt-past').checked;S.opts.future=document.getElementById('opt-future').checked;syncSave();refreshDate();}
 function loadOptsUI(){document.getElementById('opt-past').checked=!!S.opts.past;document.getElementById('opt-future').checked=!!S.opts.future;document.getElementById('opt-admin').checked=!!S.opts.admin;document.getElementById('gas-area').style.display=S.opts.admin?'block':'none';document.getElementById('opt-title').value=S.opts.title||'이안 & 로건 포인트';setUserCount(S.opts.userCount||2);setWeekStart(S.opts.weekStart||0);
   var oc3=document.getElementById('opt-sheet-id');if(oc3)oc3.value=S.opts.sheetId||'';
+  var oc4=document.getElementById('opt-base-sheet-id');if(oc4)oc4.value=S.opts.baseSheetId||'';
   var gi=document.getElementById('opt-goal-ian');if(gi)gi.value=S.opts.weekGoalIan||'';
   var gl=document.getElementById('opt-goal-logan');if(gl)gl.value=S.opts.weekGoalLogan||'';
   var l1=document.getElementById('opt-k1n-lbl');if(l1)l1.textContent=kn('ian');
@@ -2536,6 +2549,7 @@ function saveAppOpts(){
     if(c2.value)S.opts.color2=c2.value;
   }var pnEl3=document.getElementById('opt-parent-name');if(pnEl3)S.opts.parentName=pnEl3.value.trim()||'아빠';S.opts.k1n=document.getElementById('opt-k1n').value.trim()||'이안';S.opts.k1s=document.getElementById('opt-k1s').value.trim()||'4학년';S.opts.k2n=document.getElementById('opt-k2n').value.trim()||'로건';S.opts.k2s=document.getElementById('opt-k2s').value.trim()||'1학년';
   var urlEl=document.getElementById('opt-gas-url');if(urlEl){var url=urlEl.value.trim();if(url&&!url.startsWith('https://script.google.com')){toast('올바른 Apps Script URL을 입력해주세요');return;}S.opts.gasUrl=url;}
+  var bsidEl=document.getElementById('opt-base-sheet-id');if(bsidEl)S.opts.baseSheetId=bsidEl.value.trim();
   var sidEl=document.getElementById('opt-sheet-id');if(sidEl)S.opts.sheetId=sidEl.value.trim();
   var daysEl=document.getElementById('opt-backup-days');if(daysEl){var days=parseInt(daysEl.value);if(isNaN(days)||days<0)days=30;S.opts.backupDays=days;}
   syncSave();applyAppOpts();
@@ -2841,6 +2855,16 @@ function clearSheetId(){
     toast('지웠어요. 저장 버튼을 눌러주세요.');
   });
 }
+function showDebugInfo(){
+  var sid=(document.getElementById('opt-sheet-id')?document.getElementById('opt-sheet-id').value.trim():'')||S.opts.sheetId||'없음';
+  var gasUrl=getGasUrl();
+  var msg='GAS: '+gasUrl.substring(0,40)+'...\n시트ID: '+sid.substring(0,20)+'\nTS: '+S.lastModified;
+  toast(msg);
+  console.log('GAS URL:',gasUrl);
+  console.log('sheetId:',sid);
+  console.log('S.opts.sheetId:',S.opts.sheetId);
+  console.log('lastModified:',S.lastModified);
+}
 function forceLoadFromServer(){
   if(!isAdmin()){toast('관리자 모드에서만 사용할 수 있어요.');return;}
   confirm2('서버에서 강제 불러오기','서버 데이터로 현재 기기 데이터를 덮어씁니다.\n계속할까요?','불러오기',true,function(){
@@ -2882,7 +2906,7 @@ function forceLoadFromServer(){
       }
     };
     // 화면 입력값 우선, 없으면 S.opts.sheetId
-    var _sidVal=(document.getElementById('opt-sheet-id')?document.getElementById('opt-sheet-id').value.trim():'')||S.opts.sheetId||'';
+    var _sidVal=(document.getElementById('opt-sheet-id')?document.getElementById('opt-sheet-id').value.trim():'')||S.opts.sheetId||getDefaultSheetId();
     var _sid=_sidVal?'&sheetId='+encodeURIComponent(_sidVal):'';
     console.log('[ForceLoad] sheetId:', _sidVal, 'URL:', getGasUrl()+_sid);
     sc.src=getGasUrl()+'?callback='+cbName+'&t='+Date.now()+_sid;
@@ -3025,7 +3049,7 @@ function checkServerTs(){
       }
     }catch(e){}
   };
-  var _sid2=S.opts.sheetId?'&sheetId='+encodeURIComponent(S.opts.sheetId):'';script2.src=getGasUrl()+'?callback='+cbName+'&t='+Date.now()+_sid2;
+  var _sid2Val=S.opts.sheetId||getDefaultSheetId();var _sid2='&sheetId='+encodeURIComponent(_sid2Val);script2.src=getGasUrl()+'?callback='+cbName+'&t='+Date.now()+_sid2;
   script2.onerror=function(){if(done2)return;done2=true;clearTimeout(timer2);delete window[cbName];};
   document.head.appendChild(script2);
 }
@@ -3036,13 +3060,74 @@ function scheduleMidnight(){
   var ms=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1,0,0,1).getTime()-now.getTime();
   setTimeout(function(){autoConfirmToday();scheduleMidnight();},ms);
 }
-function autoConfirmToday(){save();vDate=new Date();refreshDate();initTodayBase();renderTasks();}
+function recoverMissingHistory(){
+  // 확정됐는데 history에 confirm 기록이 없는 날짜 자동 복구
+  var recovered=0;
+  Object.keys(S.dayData).forEach(function(ds){
+    var d=S.dayData[ds];
+    if(!d||!d.confirmed||!d.snap)return;
+    // 이날 history에 confirm 기록 있는지 확인
+    var hasIan=S.history.some(function(h){
+      return h.who==='ian'&&h.type==='confirm'&&h.name.indexOf(ds)>-1;
+    });
+    var hasLogan=S.history.some(function(h){
+      return h.who==='logan'&&h.type==='confirm'&&h.name.indexOf(ds)>-1;
+    });
+    var ianPts=d.snap.ianPts||0;
+    var loganPts=d.snap.loganPts||0;
+    // 날짜 형식: YYYY-M-D → "YYYY. M. D." 변환
+    var parts=ds.split('-');
+    var dateStr=parts[0]+'. '+parts[1]+'. '+parts[2]+'.';
+    if(ianPts>0&&!hasIan){
+      S.history.push({who:'ian',pts:ianPts,name:'확정 '+ds,type:'confirm',time:dateStr+' 23:59'});
+      recovered++;
+    }
+    if(loganPts>0&&!hasLogan){
+      S.history.push({who:'logan',pts:loganPts,name:'확정 '+ds,type:'confirm',time:dateStr+' 23:59'});
+      recovered++;
+    }
+  });
+  if(recovered>0){
+    // 날짜 순으로 정렬 (최신이 앞)
+    S.history.sort(function(a,b){
+      return new Date(b.time)-new Date(a.time);
+    });
+    console.log('[복구] '+recovered+'개 history 항목 복구됨');
+    save();
+  }
+}
+function autoConfirmToday(){
+  // 오늘 날짜 확정: 체크한 포인트를 history에 추가
+  var todayKey=todayStr();
+  var d=S.dayData[todayKey];
+  if(d&&!d.confirmed){
+    var ianPts=calcPts(d.ian||{});
+    var loganPts=calcPts(d.logan||{});
+    var ts=new Date().toLocaleDateString('ko-KR')+' 00:00';
+    if(ianPts>0){
+      S.history.unshift({who:'ian',pts:ianPts,name:'확정 '+todayKey,type:'confirm',time:ts});
+    }
+    if(loganPts>0){
+      S.history.unshift({who:'logan',pts:loganPts,name:'확정 '+todayKey,type:'confirm',time:ts});
+    }
+    d.confirmed=true;
+    if(!d.snap){
+      d.snap={baseIan:Object.assign({},d.ian||{}),baseLogan:Object.assign({},d.logan||{}),
+        ianPts:ianPts,loganPts:loganPts,ianOrig:null,loganOrig:null,
+        ianBefore:recalcTotal('ian')-ianPts,loganBefore:recalcTotal('logan')-loganPts,
+        modIan:null,modLogan:null};
+    }
+  }
+  save();syncSave();
+  vDate=new Date();refreshDate();initTodayBase();renderTasks();updateBoard();
+}
 
 /* 초기 실행 */
 S.opts.admin=false;
 if(!S.opts.gasUrl)S.opts.gasUrl='';
 
 function _initApp(){
+  recoverMissingHistory(); // 누락된 history 자동 복구
   refreshDate();initTodayBase(true);renderTasks();
   loadOptsUI();applyAdminUI();applyAppOpts();
   var vn=document.getElementById('version-num');if(vn)vn.textContent=APP_VERSION;
