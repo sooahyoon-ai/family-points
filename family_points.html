@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v0.8.5 | Family Points App | Release 2026-05-14 -->
+<!-- 가족포인트앱 v0.8.6 | Family Points App | Release 2026-05-14 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -959,7 +959,7 @@ function ucLight(who){
 }
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='0.8.5';
+var APP_VERSION='0.8.6';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 function getGasUrl(){
   // S.opts.gasUrl 설정값 우선, 없으면 하드코딩된 기본값 사용
@@ -2534,7 +2534,11 @@ function saveAppOpts(){
   if(c2&&(S.opts.userCount||2)>=2){
     if(c2.value&&c2.value===c1.value){toast('두 색상이 같아요. 다른 색을 선택해주세요.');return;}
     if(c2.value)S.opts.color2=c2.value;
-  }var pnEl3=document.getElementById('opt-parent-name');if(pnEl3)S.opts.parentName=pnEl3.value.trim()||'아빠';S.opts.k1n=document.getElementById('opt-k1n').value.trim()||'이안';S.opts.k1s=document.getElementById('opt-k1s').value.trim()||'4학년';S.opts.k2n=document.getElementById('opt-k2n').value.trim()||'로건';S.opts.k2s=document.getElementById('opt-k2s').value.trim()||'1학년';syncSave();applyAppOpts();
+  }var pnEl3=document.getElementById('opt-parent-name');if(pnEl3)S.opts.parentName=pnEl3.value.trim()||'아빠';S.opts.k1n=document.getElementById('opt-k1n').value.trim()||'이안';S.opts.k1s=document.getElementById('opt-k1s').value.trim()||'4학년';S.opts.k2n=document.getElementById('opt-k2n').value.trim()||'로건';S.opts.k2s=document.getElementById('opt-k2s').value.trim()||'1학년';
+  var urlEl=document.getElementById('opt-gas-url');if(urlEl){var url=urlEl.value.trim();if(url&&!url.startsWith('https://script.google.com')){toast('올바른 Apps Script URL을 입력해주세요');return;}S.opts.gasUrl=url;}
+  var sidEl=document.getElementById('opt-sheet-id');if(sidEl)S.opts.sheetId=sidEl.value.trim();
+  var daysEl=document.getElementById('opt-backup-days');if(daysEl){var days=parseInt(daysEl.value);if(isNaN(days)||days<0)days=30;S.opts.backupDays=days;}
+  syncSave();applyAppOpts();
   // 현재 탭 다시 렌더링 (1명↔2명 전환 즉시 반영)
   // 현재 탭 갱신
   var activePanelId='today';
