@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v0.8.23 | Family Points App | Release 2026-05-15 -->
+<!-- 가족포인트앱 v0.8.24 | Family Points App | Release 2026-05-15 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -963,7 +963,7 @@ function ucLight(who){
 }
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='0.8.23';
+var APP_VERSION='0.8.24';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1QGHZexsJcZoVACwgoA7Ol29yKA3J9yIfQKWyNy6JzDI'; // 공용 임시 (처음 쓰는 사람용)
 function getDefaultSheetId(){
@@ -1106,7 +1106,9 @@ function syncLoad(onDone){
       var localTS=S.lastModified||0;
       remote.opts.admin=false;
 
-      if(remoteTS>=localTS){
+      // 서버 데이터가 있고 로컬보다 최신이면 서버 우선
+      // 동점(==)일 때는 로컬 유지 (방금 저장한 기기)
+      if(remoteTS>localTS||localTS===0){
         // 서버가 더 최신이거나 로컬이 비어있음 → 서버 데이터 사용
         var remoteJSON=JSON.stringify(remote);
         var localJSON=JSON.stringify(S);
@@ -2827,7 +2829,7 @@ function doRestore(input){
     try{
       var restored=JSON.parse(e.target.result);
       // lastModified를 현재 시간보다 크게 설정 (서버 덮어쓰기 방지)
-      restored.lastModified=Date.now()+600000; // 10분 후
+      restored.lastModified=Date.now()+1000; // 1초 후 (서버보다 최신 보장)
       S=restored;
       patchState(S);
       save();
