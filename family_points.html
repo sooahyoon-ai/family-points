@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v0.7.0 | Family Points App | Release 2026-05-14 -->
+<!-- 가족포인트앱 v0.7.4 | Family Points App | Release 2026-05-14 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -564,9 +564,7 @@ input:checked+.toggle-sl:before{transform:translateX(18px);}
               </div>
             </div>
             <button onclick="saveAppOpts()" style="padding:8px;border-radius:9px;border:none;background:#1D9E75;color:#fff;font-size:13px;font-weight:700;cursor:pointer;-webkit-appearance:none">저장</button>
-          <button onclick="manualBackup()" style="padding:8px;border-radius:9px;border:1px solid #3498DB;background:#EBF5FB;color:#1a5276;font-size:13px;font-weight:700;cursor:pointer;-webkit-appearance:none;margin-top:6px;width:100%">💾 지금 백업</button>
-          <button onclick="restoreFromFile()" style="padding:8px;border-radius:9px;border:1px solid #E67E22;background:#FEF9E7;color:#784212;font-size:13px;font-weight:700;cursor:pointer;-webkit-appearance:none;margin-top:4px;width:100%">📂 백업 파일로 복구</button>
-          <input type="file" id="restore-file-input" accept=".json" style="display:none" onchange="doRestore(this)">
+
           </div>
         </div>
           <div style="text-align:center;margin-top:16px;font-size:11px;color:#ccc" id="version-lbl">가족포인트앱 v<span id="version-num"></span></div>
@@ -590,16 +588,17 @@ input:checked+.toggle-sl:before{transform:translateX(18px);}
                 <button onclick="openGasScript()" title="Apps Script 열기" style="padding:6px 8px;border-radius:8px;border:1px solid #9FE1CB;background:#E1F5EE;color:#085041;cursor:pointer;font-size:13px;font-weight:700;flex-shrink:0;-webkit-appearance:none">⚡</button>
               </div>
             </div>
+
             <div>
               <div class="opt-lbl" style="margin-bottom:4px">스프레드시트 ID</div>
-              <div class="opt-sub" style="margin-bottom:6px">Step 3에서 입력한 시트 ID — URL의 /d/ 뒤 긴 문자열</div>
+              <div class="opt-sub" style="margin-bottom:6px">비워두면 기본 공용 DB 사용. 입력하면 개인 DB에 저장.</div>
               <div style="display:flex;gap:5px;align-items:center">
                 <input type="text" id="opt-sheet-id" style="flex:1;padding:7px 9px;border:1px solid #d3d1c7;border-radius:8px;font-size:12px;-webkit-appearance:none" placeholder="1BxiMVs0XRA5nFMdKvBdBZjg..."/>
                 <button onclick="copySheetId()" title="ID 복사" style="padding:6px 8px;border-radius:8px;border:1px solid #d3d1c7;background:#fff;cursor:pointer;font-size:14px;flex-shrink:0;-webkit-appearance:none">📋</button>
-                <button onclick="openSheet()" title="스프레드시트 열기" style="padding:6px 10px;border-radius:8px;border:1px solid #85B7EB;background:#E6F1FB;color:var(--color1);cursor:pointer;font-size:13px;font-weight:700;flex-shrink:0;-webkit-appearance:none">📊</button>
-                <button onclick="clearSheetId()" title="ID 지우기 (기본값 사용)" style="padding:6px 10px;border-radius:8px;border:1px solid #E57373;background:#FFF0F0;color:#c0392b;font-size:12px;cursor:pointer;-webkit-appearance:none;flex-shrink:0">🗑️ 지우기</button>
+                <button onclick="clearSheetId()" title="ID 지우기" style="padding:6px 8px;border-radius:8px;border:1px solid #E57373;background:#FFF0F0;color:#c0392b;font-size:12px;cursor:pointer;-webkit-appearance:none;flex-shrink:0">🗑️</button>
               </div>
             </div>
+
             <div>
               <div class="opt-lbl" style="margin-bottom:4px">백업 보관 기간</div>
               <div class="opt-sub" style="margin-bottom:6px">매일 자정 백업 — 0이면 무제한 보관</div>
@@ -608,6 +607,11 @@ input:checked+.toggle-sl:before{transform:translateX(18px);}
                 <span style="font-size:13px;color:#888">일</span>
                 <span style="font-size:11px;color:#aaa">(0 = 무제한)</span>
               </div>
+              <div style="display:flex;gap:6px;margin-top:8px">
+                <button onclick="manualBackup()" style="flex:1;padding:7px;border-radius:8px;border:1px solid #3498DB;background:#EBF5FB;color:#1a5276;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none">💾 지금 백업</button>
+                <button onclick="restoreFromFile()" style="flex:1;padding:7px;border-radius:8px;border:1px solid #E67E22;background:#FEF9E7;color:#784212;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none">📂 복구</button>
+              </div>
+              <input type="file" id="restore-file-input" accept=".json" style="display:none" onchange="doRestore(this)">
             </div>
             <div style="display:flex;gap:6px">
               <button onclick="saveGasUrl()" style="flex:1;padding:7px;border-radius:8px;border:none;background:#1D9E75;color:#fff;font-size:13px;font-weight:700;cursor:pointer;-webkit-appearance:none">저장</button>
@@ -954,7 +958,7 @@ function ucLight(who){
 }
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='0.7.0';
+var APP_VERSION='0.7.4';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 function getGasUrl(){
   // S.opts.gasUrl 설정값 우선, 없으면 하드코딩된 기본값 사용
@@ -2466,12 +2470,13 @@ function renderHistory(){applyHistFilterUI();var el=document.getElementById('his
 /* 옵션 */
 function saveOpts(){S.opts.past=document.getElementById('opt-past').checked;S.opts.future=document.getElementById('opt-future').checked;syncSave();refreshDate();}
 function loadOptsUI(){document.getElementById('opt-past').checked=!!S.opts.past;document.getElementById('opt-future').checked=!!S.opts.future;document.getElementById('opt-admin').checked=!!S.opts.admin;document.getElementById('gas-area').style.display=S.opts.admin?'block':'none';document.getElementById('opt-title').value=S.opts.title||'이안 & 로건 포인트';setUserCount(S.opts.userCount||2);setWeekStart(S.opts.weekStart||0);
+  var oc3=document.getElementById('opt-sheet-id');if(oc3)oc3.value=S.opts.sheetId||'';
   var gi=document.getElementById('opt-goal-ian');if(gi)gi.value=S.opts.weekGoalIan||'';
   var gl=document.getElementById('opt-goal-logan');if(gl)gl.value=S.opts.weekGoalLogan||'';
   var l1=document.getElementById('opt-k1n-lbl');if(l1)l1.textContent=kn('ian');
   var l2=document.getElementById('opt-k2n-lbl');if(l2)l2.textContent=kn('logan');
   var lrow=document.getElementById('opt-goal-logan-row');if(lrow)lrow.style.display=userCount()<2?'none':'flex';
-  var vn=document.getElementById('version-num');if(vn)vn.textContent=APP_VERSION;var oc1=document.getElementById('opt-color1');if(oc1)oc1.value=S.opts.color1||'#1565C0';var oc2=document.getElementById('opt-color2');if(oc2)oc2.value=S.opts.color2||'#9A5C00';var cl1=document.getElementById('color1-lbl');if(cl1)cl1.textContent=S.opts.k1n||'이안';var cl2=document.getElementById('color2-lbl');if(cl2)cl2.textContent=S.opts.k2n||'로건';setUserCount(S.opts.userCount||2);var pnEl2=document.getElementById('opt-parent-name');if(pnEl2)pnEl2.value=S.opts.parentName||'아빠';document.getElementById('opt-k1n').value=S.opts.k1n||'이안';document.getElementById('opt-k1s').value=S.opts.k1s||'4학년';document.getElementById('opt-k2n').value=S.opts.k2n||'로건';document.getElementById('opt-k2s').value=S.opts.k2s||'1학년';document.getElementById('opt-gas-url').value=S.opts.gasUrl||'';document.getElementById('opt-sheet-id').value=S.opts.sheetId||'';document.getElementById('opt-backup-days').value=S.opts.backupDays!==undefined?S.opts.backupDays:30;}
+  var vn=document.getElementById('version-num');if(vn)vn.textContent=APP_VERSION;var oc1=document.getElementById('opt-color1');if(oc1)oc1.value=S.opts.color1||'#1565C0';var oc2=document.getElementById('opt-color2');if(oc2)oc2.value=S.opts.color2||'#9A5C00';var cl1=document.getElementById('color1-lbl');if(cl1)cl1.textContent=S.opts.k1n||'이안';var cl2=document.getElementById('color2-lbl');if(cl2)cl2.textContent=S.opts.k2n||'로건';setUserCount(S.opts.userCount||2);var pnEl2=document.getElementById('opt-parent-name');if(pnEl2)pnEl2.value=S.opts.parentName||'아빠';document.getElementById('opt-k1n').value=S.opts.k1n||'이안';document.getElementById('opt-k1s').value=S.opts.k1s||'4학년';document.getElementById('opt-k2n').value=S.opts.k2n||'로건';document.getElementById('opt-k2s').value=S.opts.k2s||'1학년';document.getElementById('opt-gas-url').value=S.opts.gasUrl||'';document.getElementById('opt-backup-days').value=S.opts.backupDays!==undefined?S.opts.backupDays:30;}
 function setWeekStart(n){
   var w0=document.getElementById('opt-ws0');
   var w1=document.getElementById('opt-ws1');
@@ -2571,25 +2576,14 @@ function applyAppOpts(){
   });
 }
 
-function saveGasUrl(){var url=document.getElementById('opt-gas-url').value.trim();var sid=document.getElementById('opt-sheet-id').value.trim();var days=parseInt(document.getElementById('opt-backup-days').value);if(url&&!url.startsWith('https://script.google.com')){toast('올바른 Apps Script URL을 입력해주세요');return;}if(isNaN(days)||days<0)days=30;S.opts.gasUrl=url;S.opts.sheetId=sid;S.opts.backupDays=days;syncSave();toast('저장됨');}
+function saveGasUrl(){var url=document.getElementById('opt-gas-url').value.trim();var days=parseInt(document.getElementById('opt-backup-days').value);if(url&&!url.startsWith('https://script.google.com')){toast('올바른 Apps Script URL을 입력해주세요');return;}if(isNaN(days)||days<0)days=30;S.opts.gasUrl=url;S.opts.sheetId=(document.getElementById('opt-sheet-id')?document.getElementById('opt-sheet-id').value.trim():'');S.opts.backupDays=days;syncSave();toast('저장됨');}
 function copyGasUrl(){var url=document.getElementById('opt-gas-url').value.trim()||getGasUrl();if(!url){toast('URL이 없어요');return;}if(navigator.clipboard){navigator.clipboard.writeText(url).then(function(){toast('📋 URL 복사됨');}).catch(function(){fallbackCopy(url);});}else{fallbackCopy(url);}}
 function fallbackCopy(text){var ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('📋 URL 복사됨');}catch(e){toast('복사 실패');}document.body.removeChild(ta);}
 function openGasScript(){window.open('https://script.google.com/home','_blank');toast('⚡ Apps Script 홈 열기');}
-function copySheetId(){var sid=document.getElementById('opt-sheet-id').value.trim()||S.opts.sheetId;if(!sid){toast('시트 ID를 먼저 입력해주세요');return;}if(navigator.clipboard){navigator.clipboard.writeText(sid).then(function(){toast('📋 시트 ID 복사됨');}).catch(function(){fallbackCopy(sid);});}else{fallbackCopy(sid);}}
-function openSheet(){var sid=document.getElementById('opt-sheet-id').value.trim()||S.opts.sheetId;if(!sid){toast('스프레드시트 ID를 먼저 입력해주세요');return;}window.open('https://docs.google.com/spreadsheets/d/'+sid+'/edit','_blank');}
-function clearSheetId(){
-  confirm2('시트 ID 초기화','개인 시트 ID를 지울까요?\n지우면 공용 임시 DB를 사용해요.\n(저장 버튼을 눌러야 적용돼요)','확인',false,function(){
-    var el=document.getElementById('opt-sheet-id');
-    if(el)el.value=''; // 빈칸 = db에 sheetId 없음 = GAS가 INITIAL_SHEET_ID 사용
-    toast('ID를 지웠어요. 저장 버튼을 눌러주세요.');
-  });
-}
-function openBackup(){
-  var sid=document.getElementById('opt-sheet-id').value.trim()||S.opts.sheetId;
-  if(!sid){toast('스프레드시트 ID를 먼저 입력해주세요');return;}
-  // Backup 시트를 이름으로 검색하여 열기
-  window.open('https://docs.google.com/spreadsheets/d/'+sid+'/edit#gid=Backup','_blank');
-}
+
+
+
+
 function openAppsScript(){window.open('https://script.google.com/home','_blank');}
 function testGasUrl(){var url=document.getElementById('opt-gas-url').value.trim()||getGasUrl();setSyncStatus('syncing');toast('연결 테스트 중…');fetch(url+'?t='+Date.now()).then(function(r){return r.text();}).then(function(){setSyncStatus('online');toast('✓ 연결 성공!');}).catch(function(){setSyncStatus('error');toast('✗ 연결 실패 — URL을 확인해주세요');});}
 function resetAll(){if(!isAdmin()){toast('관리자 모드에서만 사용할 수 있어요.');return;}confirm2('전체 초기화','모든 포인트·내역·쿠폰함이 삭제됩니다. 계속할까요?','초기화',true,function(){var saved={opts:S.opts,tasks:S.tasks,coupons:S.coupons,customGroups:S.customGroups};S=mkState();S.opts=saved.opts;S.tasks=saved.tasks;S.coupons=saved.coupons;S.customGroups=saved.customGroups||[];syncSave();vDate=new Date();refreshDate();initTodayBase(true);renderTasks();updateBoard();toast('전체 데이터 초기화됨');});}
@@ -2799,6 +2793,25 @@ function doRestore(input){
     input.value=''; // 초기화
   };
   reader.readAsText(file);
+}
+function copySheetId(){
+  var el=document.getElementById('opt-sheet-id');
+  var sid=el?el.value.trim():S.opts.sheetId||'';
+  if(!sid){toast('시트 ID가 없어요');return;}
+  try{navigator.clipboard.writeText(sid);toast('복사됨');}
+  catch(e){fallbackCopy(sid);}
+}
+function viewSheetJson(){
+  var sid=document.getElementById('opt-sheet-id').value.trim()||S.opts.sheetId||'';
+  if(!sid){toast('시트 ID를 먼저 입력해주세요');return;}
+  window.open('https://docs.google.com/spreadsheets/d/'+sid+'/edit','_blank');
+}
+function clearSheetId(){
+  confirm2('시트 ID 초기화','시트 ID를 지우고 기본 공용 DB를 사용할까요?\n(저장 버튼을 눌러야 적용돼요)','확인',false,function(){
+    var el=document.getElementById('opt-sheet-id');
+    if(el)el.value='';
+    toast('지웠어요. 저장 버튼을 눌러주세요.');
+  });
 }
 function showHelp(){
   document.getElementById('help-overlay').style.display='flex';
