@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v0.8.7 | Family Points App | Release 2026-05-14 -->
+<!-- 가족포인트앱 v0.8.8 | Family Points App | Release 2026-05-14 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -959,7 +959,7 @@ function ucLight(who){
 }
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='0.8.7';
+var APP_VERSION='0.8.8';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 function getGasUrl(){
   // S.opts.gasUrl 설정값 우선, 없으면 하드코딩된 기본값 사용
@@ -1798,7 +1798,7 @@ function toggleCheck(who,tid){
   }
   if(isToday()){
     applyTodayPts();
-    debouncedSyncSave(5000); // 5초 디바운스
+    debouncedSyncSave(3000); // 5초 디바운스
   }
   // 과거 미확정 체크는 저장 안 함 (확정 시에만 저장)
   save(); // 로컬은 즉시 저장
@@ -2995,7 +2995,7 @@ setInterval(function(){
   if(needsFull)renderTasks();else updateBoard(); // 포인트 실시간 갱신
 },1000);
 
-var POLL_INTERVAL=30000,pollTimer=null;
+var POLL_INTERVAL=10000,pollTimer=null;
 function startPolling(){stopPolling();pollTimer=setInterval(function(){if(!isOnline)return;checkServerTs();},POLL_INTERVAL);}
 function stopPolling(){if(pollTimer){clearInterval(pollTimer);pollTimer=null;}}
 function checkServerTs(){
