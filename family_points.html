@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v1.0.7 | Family Points App | Release 2026-05-15 -->
+<!-- 가족포인트앱 v1.0.8 | Family Points App | Release 2026-05-15 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -969,7 +969,7 @@ function ucLight(who){
 }
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='1.0.7';
+var APP_VERSION='1.0.8';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1QGHZexsJcZoVACwgoA7Ol29yKA3J9yIfQKWyNy6JzDI'; // 공용 임시 (처음 쓰는 사람용)
 function getDefaultSheetId(){
@@ -1115,7 +1115,17 @@ function syncLoad(onDone){
       // 서버 데이터가 있고 로컬보다 최신이면 서버 우선
       // 동점(==)일 때는 로컬 유지 (방금 저장한 기기)
       if(remoteTS>localTS||localTS===0){
-        // 서버가 더 최신이거나 로컬이 비어있음 → 서버 데이터 사용
+        // 서버 데이터 history가 비어있고 로컬에 데이터 있으면 서버 무시
+        var remoteHasData=remote.history&&remote.history.length>0;
+        var localHasData=S.history&&S.history.length>0;
+        if(!remoteHasData&&localHasData){
+          console.log('[Sync] 서버 history 없음 — 로컬 데이터 보호, 서버에 올림');
+          setSyncStatus('online');
+          syncSave();
+          if(onDone)onDone(false);
+          return;
+        }
+        // 서버 데이터 사용
         var remoteJSON=JSON.stringify(remote);
         var localJSON=JSON.stringify(S);
         S=remote;
@@ -1161,6 +1171,12 @@ function syncLoad(onDone){
 
 /* syncSave: 데이터 변경 시 로컬 즉시 저장 + 서버 디바운스 저장 (1.5초) */
 function syncSave(){
+  // history가 비어있으면 서버에 올리지 않음 (빈 데이터 전파 방지)
+  if(!S.history||S.history.length===0){
+    save();
+    console.log('[Sync] history 없음 — 서버 업로드 차단');
+    return;
+  }
   save(); // 로컬 즉시 저장
   if(!isOnline)return; // 오프라인이면 로컬만
   clearTimeout(syncTimer);
@@ -3025,7 +3041,7 @@ function doRestore(input){
     try{
       var restored=JSON.parse(e.target.result);
       // lastModified를 현재 시간보다 크게 설정 (서버 덮어쓰기 방지)
-      restored.lastModified=Date.now()+1000; // 1초 후 (서버보다 최신 보장)
+      restored.lastModified=Date.now()+3600000; // 1시간 후 (모든 기기보다 최신 보장)
       restored.opts.admin=false; // 관리자 모드는 기기 세션 전용
       S=restored;
       patchState(S);
@@ -3093,7 +3109,7 @@ function forceLoadFromServer(){
       try{
         var text=typeof raw==='string'?raw:JSON.stringify(raw);
         if(!text||text==='null'||text==='""'){
-          toast('❌ 서버에 데이터가 없어요');
+          toast('❌ 서버에 데이터가 없어요 (현재 기기 데이터 유지)');
           setSyncStatus('error');
           return;
         }
