@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v1.0.9 | Family Points App | Release 2026-05-15 -->
+<!-- 가족포인트앱 v1.0.12 | Family Points App | Release 2026-05-15 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -969,7 +969,7 @@ function ucLight(who){
 }
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='1.0.9';
+var APP_VERSION='1.0.12';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1rHjta_5QdDjB9TT8IBDg4QcrjOuUhstmMmnHWr6EyP8'; // 운영 시트 (sheetId 없을 때 기본값)
 function getDefaultSheetId(){
@@ -1932,7 +1932,23 @@ function toggleCheck(who,tid){
       }
     }
   }else{
-    d[who][tid]=Date.now(); // 체크 시각 timestamp
+    var t3=null;for(var k=0;k<S.tasks.length;k++){if(S.tasks[k].id===tid){t3=S.tasks[k];break;}}
+    if(isAdmin()&&t3&&t3.deadline&&isToday()){
+      // 관리자: 항상 마감 전 timestamp로 저장 → 기본pts 보장
+      var dlSecs=_timeSecsLeft(t3.deadline);
+      if(dlSecs!==null&&dlSecs<0){
+        // 마감 지났어도 관리자는 마감 1초 전 timestamp로 저장
+        var now2=new Date();
+        var p=t3.deadline.split(':');
+        var fakeTs=new Date(now2.getFullYear(),now2.getMonth(),now2.getDate(),parseInt(p[0]),parseInt(p[1]),0,0).getTime()-1000;
+        d[who][tid]=fakeTs;
+      }else{
+        d[who][tid]=Date.now();
+      }
+    }else{
+      d[who][tid]=Date.now(); // 체크 시각 timestamp
+    }
+    delete d[who][tid+'_grace']; // 새 체크 시 grace 초기화
   }
   if(isToday()){
     applyTodayPts();
@@ -3284,14 +3300,21 @@ function scheduleMidnight(){
 }
 
 function fixMissingHistory(){
-  // 확정된 날짜(snap 있음)인데 history에 confirm 없는 경우만 추가
-  // calcPts 사용 안 함 — snap.ianPts 사용 (이미 확정 시점 계산된 값)
+  // 오늘 제외한 과거 날짜 중 미확정이거나 history 누락된 날 처리
+  var todayKey=todayStr();
   Object.keys(S.dayData).forEach(function(ds){
+    if(ds===todayKey)return; // 오늘 제외
     var d=S.dayData[ds];
-    if(!d||!d.confirmed||!d.snap)return;
-    // snap.ianPts가 0일 수 있어서 d.ian으로 재계산
-    var ianPts=d.snap.ianPts||calcPts(d.ian||{})||0;
-    var loganPts=d.snap.loganPts||calcPts(d.logan||{})||0;
+    if(!d)return;
+    var ianPts=0,loganPts=0;
+    if(d.snap){
+      ianPts=d.snap.ianPts||calcPts(d.ian||{})||0;
+      loganPts=d.snap.loganPts||calcPts(d.logan||{})||0;
+    }else{
+      // snap 없어도 d.ian으로 계산
+      ianPts=calcPts(d.ian||{})||0;
+      loganPts=calcPts(d.logan||{})||0;
+    }
     if(ianPts===0&&loganPts===0)return;
     var parts=ds.split('-');
     var ts=parts[0]+'. '+parseInt(parts[1])+'. '+parseInt(parts[2])+'. 23:59';
@@ -3306,6 +3329,12 @@ function fixMissingHistory(){
     }
     if(loganPts>0&&!hasLogan){
       S.history.push({who:'logan',pts:loganPts,name:'확정 '+ds,type:'confirm',time:ts});
+    }
+    if(!d.confirmed)d.confirmed=true;
+    if(!d.snap){
+      d.snap={baseIan:Object.assign({},d.ian||{}),baseLogan:Object.assign({},d.logan||{}),
+        ianPts:ianPts,loganPts:loganPts,ianOrig:null,loganOrig:null,
+        ianBefore:0,loganBefore:0,modIan:null,modLogan:null};
     }
   });
 }
