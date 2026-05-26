@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v1.0.13 | Family Points App | Release 2026-05-15 -->
+<!-- 가족포인트앱 v1.0.14 | Family Points App | Release 2026-05-15 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -970,7 +970,7 @@ function ucLight(who){
 }
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='1.0.13';
+var APP_VERSION='1.0.14';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1rHjta_5QdDjB9TT8IBDg4QcrjOuUhstmMmnHWr6EyP8'; // 운영 시트 (sheetId 없을 때 기본값)
 function getDefaultSheetId(){
@@ -3030,19 +3030,23 @@ function showWelcomeContent(){
   document.getElementById('welcome-overlay').classList.add('show');
 }
 function manualBackup(){
-  // 현재 데이터를 JSON 파일로 다운로드
-  var data=JSON.stringify(S,null,2);
-  var now=new Date();
-  var dateStr=now.getFullYear()+'-'+(now.getMonth()+1)+'-'+now.getDate();
-  var timeStr=now.getHours()+''+now.getMinutes();
-  var sid=(S.opts.sheetId||'default').substring(0,6);
-  var fname='family_points_'+sid+'_backup_'+dateStr+'_'+timeStr+'.json';
-  var blob=new Blob([data],{type:'application/json'});
-  var url=URL.createObjectURL(blob);
-  var a=document.createElement('a');
-  a.href=url;a.download=fname;a.click();
-  URL.revokeObjectURL(url);
-  toast('💾 백업 파일 저장됨: '+fname);
+  if(!isOnline){toast('❌ 오프라인 상태. GAS 백업 불가.');return;}
+  toast('💾 백업 중...');
+  var json=JSON.stringify(S);
+  fetch(getGasUrl()+'?action=saveBackup',{
+    method:'POST',
+    body:json,
+    headers:{'Content-Type':'text/plain'}
+  }).then(function(r){return r.json();})
+  .then(function(res){
+    if(res.ok){
+      toast('✅ Drive 백업 완료: '+res.name);
+    }else{
+      toast('❌ 백업 실패');
+    }
+  }).catch(function(err){
+    toast('❌ 백업 오류: '+err);
+  });
 }
 function showBackupList(){
   if(!isAdmin()){toast('관리자 모드에서만 사용할 수 있어요.');return;}
@@ -3071,7 +3075,10 @@ function showBackupList(){
         var sizeStr=(f.size/1024).toFixed(1)+'KB';
         html+='<div style="padding:10px 0;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center">';
         html+='<div><div style="font-weight:600">'+f.name+'</div><div style="color:#888;font-size:11px;margin-top:2px">'+dateStr+' · '+sizeStr+'</div></div>';
-        html+='<button data-fid="'+f.id+'" data-fname="'+f.name+'" onclick="doRestoreFromBtn(this)" style="padding:6px 10px;border-radius:7px;border:1px solid #E67E22;background:#FEF9E7;color:#784212;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;flex-shrink:0;margin-left:8px">복구</button>';
+        html+='<div style="display:flex;gap:4px;flex-shrink:0;margin-left:8px">';
+        html+='<button data-fid="'+f.id+'" data-fname="'+f.name+'" onclick="doDownloadFromBtn(this)" style="padding:6px 8px;border-radius:7px;border:1px solid #1A5276;background:#EBF5FB;color:#1A5276;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none">📥</button>';
+        html+='<button data-fid="'+f.id+'" data-fname="'+f.name+'" onclick="doRestoreFromBtn(this)" style="padding:6px 8px;border-radius:7px;border:1px solid #E67E22;background:#FEF9E7;color:#784212;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none">복구</button>';
+        html+='</div>';
         html+='</div>';
       });
       content.innerHTML=html;
@@ -3115,6 +3122,38 @@ function doRestoreFromBtn(btn){
   var fid=btn.getAttribute('data-fid');
   var fname=btn.getAttribute('data-fname');
   restoreFromBackup(fid,fname);
+}
+function doDownloadFromBtn(btn){
+  var fid=btn.getAttribute('data-fid');
+  var fname=btn.getAttribute('data-fname');
+  downloadBackup(fid,fname);
+}
+function downloadBackup(fileId,fileName){
+  toast('📥 다운로드 중...');
+  var cbName='_dlCb'+Date.now();
+  var sc=document.createElement('script');
+  var done=false;
+  var timer=setTimeout(function(){
+    if(done)return;done=true;
+    delete window[cbName];if(sc.parentNode)sc.parentNode.removeChild(sc);
+    toast('❌ 다운로드 실패');
+  },15000);
+  window[cbName]=function(raw){
+    if(done)return;done=true;
+    clearTimeout(timer);delete window[cbName];if(sc.parentNode)sc.parentNode.removeChild(sc);
+    try{
+      var res=typeof raw==='string'?JSON.parse(raw):raw;
+      if(!res.ok||!res.data){toast('❌ 파일 읽기 실패');return;}
+      var blob=new Blob([res.data],{type:'application/json'});
+      var url=URL.createObjectURL(blob);
+      var a=document.createElement('a');
+      a.href=url;a.download=fileName;a.click();
+      URL.revokeObjectURL(url);
+      toast('✅ 다운로드 완료: '+fileName);
+    }catch(err){toast('❌ 오류: '+err);}
+  };
+  sc.src=getGasUrl()+'?action=getBackup&fileId='+encodeURIComponent(fileId)+'&callback='+cbName+'&t='+Date.now();
+  document.head.appendChild(sc);
 }
 function restoreFromFile(){
   if(!isAdmin()){toast('관리자 모드에서만 사용할 수 있어요.');return;}
