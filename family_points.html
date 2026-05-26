@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v1.0.12 | Family Points App | Release 2026-05-15 -->
+<!-- 가족포인트앱 v1.0.13 | Family Points App | Release 2026-05-15 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -618,6 +618,7 @@ input:checked+.toggle-sl:before{transform:translateX(18px);}
               </div>
               <div style="display:flex;gap:6px;margin-top:8px">
                 <button onclick="manualBackup()" style="flex:1;padding:7px;border-radius:8px;border:1px solid #3498DB;background:#EBF5FB;color:#1a5276;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none">💾 지금 백업</button>
+                <button onclick="showBackupList()" style="flex:1;padding:7px;border-radius:8px;border:1px solid #8E44AD;background:#F5EEF8;color:#6C3483;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none">📋 백업 목록</button>
                 <button onclick="restoreFromFile()" style="flex:1;padding:7px;border-radius:8px;border:1px solid #E67E22;background:#FEF9E7;color:#784212;font-size:12px;font-weight:700;cursor:pointer;-webkit-appearance:none">📂 복구</button>
               </div>
               <input type="file" id="restore-file-input" accept=".json" style="display:none" onchange="doRestore(this)">
@@ -969,7 +970,7 @@ function ucLight(who){
 }
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='1.0.12';
+var APP_VERSION='1.0.13';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1rHjta_5QdDjB9TT8IBDg4QcrjOuUhstmMmnHWr6EyP8'; // 운영 시트 (sheetId 없을 때 기본값)
 function getDefaultSheetId(){
@@ -3043,6 +3044,78 @@ function manualBackup(){
   URL.revokeObjectURL(url);
   toast('💾 백업 파일 저장됨: '+fname);
 }
+function showBackupList(){
+  if(!isAdmin()){toast('관리자 모드에서만 사용할 수 있어요.');return;}
+  var modal=document.getElementById('modal-backup-list');
+  var content=document.getElementById('backup-list-content');
+  modal.style.display='flex';
+  content.innerHTML='불러오는 중...';
+  var cbName='_backupListCb'+Date.now();
+  var sc=document.createElement('script');
+  var done=false;
+  var timer=setTimeout(function(){
+    if(done)return;done=true;
+    delete window[cbName];if(sc.parentNode)sc.parentNode.removeChild(sc);
+    content.innerHTML='❌ 불러오기 실패';
+  },10000);
+  window[cbName]=function(raw){
+    if(done)return;done=true;
+    clearTimeout(timer);delete window[cbName];if(sc.parentNode)sc.parentNode.removeChild(sc);
+    try{
+      var res=typeof raw==='string'?JSON.parse(raw):raw;
+      if(!res.ok||!res.files||res.files.length===0){content.innerHTML='백업 파일이 없어요.';return;}
+      var html='';
+      res.files.forEach(function(f){
+        var d=new Date(f.updated);
+        var dateStr=d.toLocaleDateString('ko-KR')+' '+d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+        var sizeStr=(f.size/1024).toFixed(1)+'KB';
+        html+='<div style="padding:10px 0;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center">';
+        html+='<div><div style="font-weight:600">'+f.name+'</div><div style="color:#888;font-size:11px;margin-top:2px">'+dateStr+' · '+sizeStr+'</div></div>';
+        html+='<button data-fid="'+f.id+'" data-fname="'+f.name+'" onclick="doRestoreFromBtn(this)" style="padding:6px 10px;border-radius:7px;border:1px solid #E67E22;background:#FEF9E7;color:#784212;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none;flex-shrink:0;margin-left:8px">복구</button>';
+        html+='</div>';
+      });
+      content.innerHTML=html;
+    }catch(err){content.innerHTML='❌ 오류: '+err;}
+  };
+  sc.src=getGasUrl()+'?action=listBackups&callback='+cbName+'&t='+Date.now();
+  document.head.appendChild(sc);
+}
+function restoreFromBackup(fileId,fileName){
+  confirm2('백업 복구','['+fileName+'] 파일로 복구할까요?\n현재 데이터는 덮어써져요.','복구',true,function(){
+    document.getElementById('modal-backup-list').style.display='none';
+    var cbName='_backupGetCb'+Date.now();
+    var sc=document.createElement('script');
+    var done=false;
+    var timer=setTimeout(function(){
+      if(done)return;done=true;
+      delete window[cbName];if(sc.parentNode)sc.parentNode.removeChild(sc);
+      toast('❌ 복구 실패 (timeout)');
+    },15000);
+    window[cbName]=function(raw){
+      if(done)return;done=true;
+      clearTimeout(timer);delete window[cbName];if(sc.parentNode)sc.parentNode.removeChild(sc);
+      try{
+        var res=typeof raw==='string'?JSON.parse(raw):raw;
+        if(!res.ok||!res.data){toast('❌ 파일 읽기 실패');return;}
+        var restored=JSON.parse(res.data);
+        restored.lastModified=Date.now()+3600000;
+        restored.opts.admin=false;
+        S=restored;patchState(S);
+        S.opts.admin=true;
+        save();lastSyncedJSON='';syncSave();
+        refreshDate();renderTasks();updateBoard();loadOptsUI();applyAdminUI();applyAppOpts();
+        toast('✅ ['+fileName+'] 복구 완료!');
+      }catch(err){toast('❌ 복구 오류: '+err);}
+    };
+    sc.src=getGasUrl()+'?action=getBackup&fileId='+encodeURIComponent(fileId)+'&callback='+cbName+'&t='+Date.now();
+    document.head.appendChild(sc);
+  });
+}
+function doRestoreFromBtn(btn){
+  var fid=btn.getAttribute('data-fid');
+  var fname=btn.getAttribute('data-fname');
+  restoreFromBackup(fid,fname);
+}
 function restoreFromFile(){
   if(!isAdmin()){toast('관리자 모드에서만 사용할 수 있어요.');return;}
   confirm2('백업 복구','백업 JSON 파일로 데이터를 복구할까요?\n현재 데이터는 덮어써져요.','복구',true,function(){
@@ -3389,5 +3462,15 @@ syncLoad(function(){
 });
 
 </script>
+  <!-- 백업 목록 모달 -->
+  <div id="modal-backup-list" class="modal-overlay" style="display:none;z-index:300" onclick="if(event.target===this)this.style.display='none'">
+    <div class="modal-box" style="max-height:80vh;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <span style="font-weight:700;font-size:15px">📋 백업 목록</span>
+        <button onclick="document.getElementById('modal-backup-list').style.display='none'" style="background:none;border:none;font-size:18px;cursor:pointer">✕</button>
+      </div>
+      <div id="backup-list-content" style="font-size:13px">불러오는 중...</div>
+    </div>
+  </div>
 </body>
 </html>
