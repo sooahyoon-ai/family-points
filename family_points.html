@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v1.0.15 | Family Points App | Release 2026-05-15 -->
+<!-- 가족포인트앱 v1.1.6 | Family Points App | Release 2026-05-30 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -406,11 +406,31 @@ input:checked+.toggle-sl:before{transform:translateX(18px);}
             <input type="number" class="fi-pts" id="new-pts" placeholder="±P" max="99" min="-99"/>
             <input type="text" class="fi-tag" id="new-tag" placeholder="태그"/>
           </div>
-          <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
-            <span style="font-size:11px;color:#888;white-space:nowrap">마감</span>
-            <input type="time" id="new-deadline" step="60" style="flex:1;padding:6px 8px;border:1px solid #d3d1c7;border-radius:8px;font-size:13px;-webkit-appearance:none"/>
-            <button onclick="document.getElementById('new-deadline').value=''" style="padding:5px 8px;border-radius:7px;border:1px solid #d3d1c7;background:#f5f5f3;font-size:11px;cursor:pointer;-webkit-appearance:none;color:#888">없음</button>
+
+          <!-- 주1회 옵션: ON이면 마감/유예만 비활성 -->
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+            <span style="font-size:11px;color:#888;white-space:nowrap">주 1회</span>
+            <label class="toggle-sw"><input type="checkbox" id="new-weekly" onchange="toggleNewWeekly()"><span class="toggle-sl"></span></label>
+            <span style="font-size:11px;color:#aaa">ON 시 마감·유예 비활성</span>
           </div>
+
+          <!-- 마감·유예: 주1회 ON이면 비활성 -->
+          <div id="new-deadline-wrap">
+            <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+              <span style="font-size:11px;color:#888;white-space:nowrap">마감</span>
+              <input type="time" id="new-deadline" step="60" onchange="toggleNewGrace()" oninput="toggleNewGrace()" style="flex:1;padding:6px 8px;border:1px solid #d3d1c7;border-radius:8px;font-size:13px;-webkit-appearance:none"/>
+              <button onclick="document.getElementById('new-deadline').value='';toggleNewGrace()" style="padding:5px 8px;border-radius:7px;border:1px solid #d3d1c7;background:#f5f5f3;font-size:11px;cursor:pointer;-webkit-appearance:none;color:#888">없음</button>
+            </div>
+            <div id="new-grace-wrap" style="display:none">
+              <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+                <span style="font-size:11px;color:#F5A623;white-space:nowrap">유예</span>
+                <input type="time" id="new-grace-deadline" step="60" style="flex:1;padding:6px 8px;border:1px solid #F5A623;border-radius:8px;font-size:13px;-webkit-appearance:none"/>
+                <input type="number" id="new-grace-pts" placeholder="유예P" min="0" max="99" style="width:60px;padding:6px 8px;border:1px solid #F5A623;border-radius:8px;font-size:13px;-webkit-appearance:none"/>
+              </div>
+            </div>
+          </div>
+
+          <!-- 요일: 항상 활성 -->
           <div style="margin-bottom:6px">
             <div style="font-size:11px;color:#888;margin-bottom:4px">요일</div>
             <div style="display:flex;gap:3px;margin-bottom:4px" id="new-day-btns">
@@ -427,6 +447,8 @@ input:checked+.toggle-sl:before{transform:translateX(18px);}
               <button onclick="setNewDays(false)" style="flex:1;padding:3px;border-radius:6px;border:1px solid #d3d1c7;background:#f5f5f3;color:#888;font-size:10px;cursor:pointer;-webkit-appearance:none">해제</button>
             </div>
           </div>
+
+          <!-- 대상: 항상 활성 -->
           <div style="margin-bottom:6px" id="new-who-field">
             <div style="font-size:11px;color:#888;margin-bottom:4px">대상</div>
             <div style="display:flex;gap:4px" id="new-who-btns">
@@ -435,6 +457,8 @@ input:checked+.toggle-sl:before{transform:translateX(18px);}
               <button class="who-btn who-logan" data-who="logan" onclick="setNewWho('logan')">로건만</button>
             </div>
           </div>
+
+          <!-- 적용 시작 시점: 항상 활성 -->
           <div style="display:flex;align-items:center;gap:8px;margin-top:2px">
             <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#888;cursor:pointer">
               <input type="checkbox" id="keep-add-open" style="-webkit-appearance:auto"/>
@@ -671,6 +695,14 @@ input:checked+.toggle-sl:before{transform:translateX(18px);}
       </div>
     </div>
     <div class="mfield">
+      <label>주 1회 항목</label>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+        <label class="toggle-sw"><input type="checkbox" id="m-weekly" onchange="toggleWeeklyMode()"><span class="toggle-sl"></span></label>
+        <span style="font-size:12px;color:#888">ON 시 마감·유예시간 비활성</span>
+      </div>
+    </div>
+    <div id="deadline-grace-fields">
+    <div class="mfield">
       <label>오늘 마감 시간 <span style="font-weight:400;color:#aaa">(오늘만 적용)</span></label>
       <div style="display:flex;gap:6px;align-items:center;margin-top:4px">
         <input type="time" id="m-deadline" step="60" onchange="toggleGraceField();validateGraceTime();" oninput="toggleGraceField();validateGraceTime();" style="flex:1;padding:7px 9px;border:1px solid #d3d1c7;border-radius:8px;font-size:14px;-webkit-appearance:none"/>
@@ -685,6 +717,7 @@ input:checked+.toggle-sl:before{transform:translateX(18px);}
         <input type="number" id="m-grace-pts" min="0" max="99" placeholder="P" style="width:55px;padding:7px 9px;border:1px solid var(--color2);border-radius:8px;font-size:14px;-webkit-appearance:none"/>
       </div>
     </div>
+    </div><!-- /deadline-grace-fields -->
     <div class="mfield">
       <label>표시 요일</label>
       <div id="modal-day-btns" style="display:flex;gap:4px;margin-top:4px;margin-bottom:4px">
@@ -970,7 +1003,7 @@ function ucLight(who){
 }
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='1.0.15';
+var APP_VERSION='1.1.6';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1rHjta_5QdDjB9TT8IBDg4QcrjOuUhstmMmnHWr6EyP8'; // 운영 시트 (sheetId 없을 때 기본값)
 function getDefaultSheetId(){
@@ -1219,7 +1252,7 @@ function sGet(k){try{return localStorage.getItem(k);}catch(e){return _mem[k]||nu
 function sSet(k,v){try{localStorage.setItem(k,v);}catch(e){_mem[k]=v;}}
 function mkState(){
   return {ian:0,logan:0,dayData:{},coupons:JSON.parse(JSON.stringify(DEF_COUPONS)),
-    wallet:{ian:[],logan:[]},history:[],tasks:JSON.parse(JSON.stringify(DEF_TASKS)),
+    wallet:{ian:[],logan:[]},history:[],weeklyChecks:{},tasks:JSON.parse(JSON.stringify(DEF_TASKS)),
     lastModified:0,
     customGroups:[],
     opts:{past:true,future:false,admin:false,title:'이안 & 로건 포인트',k1n:'이안',k1s:'4학년',k2n:'로건',k2s:'1학원',gasUrl:'',sheetId:'',baseSheetId:'',backupDays:30,parentName:'아빠',userCount:2,color1:'#1565C0',color2:'#9A5C00',weekStart:0,weekGoalIan:0,weekGoalLogan:0}};
@@ -1234,6 +1267,7 @@ function patchState(s){
   if(!o.parentName)o.parentName='아빠';
   if(o.weekStart===undefined)o.weekStart=0;
   if(o.weekGoalIan===undefined)o.weekGoalIan=0;
+  if(!o.weeklyChecks)o.weeklyChecks={};
   if(o.weekGoalLogan===undefined)o.weekGoalLogan=0;
   if(o.baseSheetId===undefined)o.baseSheetId='';
   if(o.backupDays===undefined)o.backupDays=30;
@@ -1474,6 +1508,28 @@ function weekSpend(who){
   });
   return Math.max(0,total);
 }
+function getWeekKey(dateObj){
+  var d=dateObj||new Date();
+  var ws=getWeekStartDate(d);
+  return ws.getFullYear()+'-'+(ws.getMonth()+1)+'-'+ws.getDate();
+}
+function calcWeeklyPts(who){
+  // 이번 주 주1회 항목 포인트 합산 (아직 history에 없는 것만)
+  var wk=getWeekKey();
+  if(!S.weeklyChecks||!S.weeklyChecks[wk])return 0;
+  return S.tasks.reduce(function(s,t){
+    if(!t.weekly)return s;
+    if(S.weeklyChecks[wk][t.id]&&S.weeklyChecks[wk][t.id][who]){
+      // 이미 history에 있으면 제외 (중복 방지)
+      var wkLabel='주1회확정 '+wk;
+      var already=S.history.some(function(h){
+        return h.who===who&&h.type==='confirm'&&h.name===wkLabel+'_'+t.id;
+      });
+      if(!already)return s+t.pts;
+    }
+    return s;
+  },0);
+}
 function weekPts(who){
   // vDate 기준으로 해당 주의 시작~끝 범위 계산
   var vd=new Date(vDate.getFullYear(),vDate.getMonth(),vDate.getDate());
@@ -1513,9 +1569,13 @@ function recalcTotal(who){
     return sum+h.pts;
   },0);
 }
-function calcPts(obj){
+function calcPts(obj,who){
+  // who 파라미터: weeklyChecks 계산에 사용
+  var wk3=getWeekKey();
   return S.tasks.reduce(function(s,t){
     var base=0;
+    // 주1회 항목: calcPts에서 제외 (확정 시 별도 처리)
+    if(t.weekly)return s;
     if(obj[t.id]){
       var checkTs=obj[t.id];
       if(obj[t.id+'_grace']&&t.gracePts>0){
@@ -1718,8 +1778,8 @@ function updateBoard(){
   // 총포인트 = history 합산 + 오늘 미확정 체크 (단일공식)
   var realTodayKey=todayStr();
   var realTodayData=S.dayData[realTodayKey]||{ian:{},logan:{}};
-  var trueIan=recalcTotal('ian')+calcPts(realTodayData.ian||{});
-  var trueLogan=recalcTotal('logan')+calcPts(realTodayData.logan||{});
+  var trueIan=recalcTotal('ian')+calcPts(realTodayData.ian||{},'ian')+calcWeeklyPts('ian');
+  var trueLogan=recalcTotal('logan')+calcPts(realTodayData.logan||{},'logan')+calcWeeklyPts('logan');
   document.getElementById('ian-pts').textContent=trueIan.toLocaleString();// 이번 주 목표 달성 체크
   if(S.opts.weekGoalIan)checkWeekGoal('ian');
   if(S.opts.weekGoalLogan&&userCount()>=2)checkWeekGoal('logan');
@@ -1915,6 +1975,22 @@ function toggleCheck(who,tid){
   if(isConf()&&!modifyMode&&!isToday()){
     toast('✏️ 수정 버튼을 눌러주세요');return;
   }
+  // 주1회 항목 처리
+  var t0=null;for(var i0=0;i0<S.tasks.length;i0++){if(S.tasks[i0].id===tid){t0=S.tasks[i0];break;}}
+  if(t0&&t0.weekly&&isToday()){
+    var wk=getWeekKey();
+    if(!S.weeklyChecks)S.weeklyChecks={};
+    if(!S.weeklyChecks[wk])S.weeklyChecks[wk]={};
+    if(!S.weeklyChecks[wk][tid])S.weeklyChecks[wk][tid]={};
+    if(S.weeklyChecks[wk][tid][who]){
+      // 이미 체크됨 → 해제
+      delete S.weeklyChecks[wk][tid][who];
+    }else{
+      // 체크
+      S.weeklyChecks[wk][tid][who]=Date.now();
+    }
+    save();debouncedSyncSave(1000);renderTasks();updateBoard();return;
+  }
   var d=DD();
   if(d[who][tid]){
     var t=null;for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].id===tid){t=S.tasks[i];break;}}
@@ -1972,6 +2048,7 @@ function confirmWho(who){
   var d=DD();
   var checkObj=d[who]||{};
   var pts=calcPts(checkObj);
+  var weeklyPts=calcWeeklyPts(who);
   var now=new Date();
   var ts=vDate.toLocaleDateString('ko-KR')+' '+now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
   var todayKey=dStr(vDate);
@@ -1981,6 +2058,19 @@ function confirmWho(who){
   });
   if(pts>0){
     S.history.unshift({who:who,pts:pts,name:'확정 '+todayKey,type:'confirm',time:ts});
+  }
+  // 주1회 항목 history 추가
+  var wk4=getWeekKey();
+  if(S.weeklyChecks&&S.weeklyChecks[wk4]){
+    S.tasks.forEach(function(t){
+      if(!t.weekly)return;
+      if(!(S.weeklyChecks[wk4][t.id]&&S.weeklyChecks[wk4][t.id][who]))return;
+      var wLabel='주1회확정 '+wk4+'_'+t.id;
+      var already=S.history.some(function(h){return h.who===who&&h.name===wLabel;});
+      if(!already){
+        S.history.unshift({who:who,pts:t.pts,name:wLabel,type:'confirm',time:ts});
+      }
+    });
   }
   // snap 갱신
   if(!d.snap){d.snap={baseIan:{},baseLogan:{},ianPts:0,loganPts:0,ianOrig:null,loganOrig:null,ianBefore:recalcTotal('ian'),loganBefore:recalcTotal('logan'),modIan:null,modLogan:null};}
@@ -2260,6 +2350,13 @@ function renderTasks(){
   var d=DD(),conf=d.confirmed,sn=d.snap,isM=manageMode,isMod=modifyMode;
 
   function checkCls(who,tid){
+    // 주1회 항목
+    var t_w=S.tasks.filter(function(t){return t.id===tid;})[0];
+    if(t_w&&t_w.weekly){
+      var wk2=getWeekKey();
+      var wChecked=S.weeklyChecks&&S.weeklyChecks[wk2]&&S.weeklyChecks[wk2][tid]&&S.weeklyChecks[wk2][tid][who];
+      return wChecked?(who==='ian'?'ian-conf':'logan-conf'):'';
+    }
     var checkVal=(d[who]||{})[tid];
     if(isToday()){
       // 오늘: d[who] 기반
@@ -2285,10 +2382,12 @@ function renderTasks(){
   }
   function checkLbl(who,tid){
     var cls=checkCls(who,tid),nm=kn(who);
+    var t_lbl=S.tasks.filter(function(t){return t.id===tid;})[0];
+    var isW=t_lbl&&t_lbl.weekly;
     if(cls.indexOf('grace')>-1)return '⏳ '+nm;
-    if(cls.indexOf('conf')>-1)return '✓ '+nm;
+    if(cls.indexOf('conf')>-1)return (isW?'🔁 ':'✓ ')+nm;
     if(cls.indexOf('sel')>-1)return '○ '+nm;
-    return nm;
+    return isW?'🔁 '+nm:nm;
   }
   function modCls(who,tid){
     if(!sn)return '';
@@ -2352,7 +2451,7 @@ function renderTasks(){
       html+='<div style="min-width:0">';
       var graceNow=isGracePeriod(t);
       var graceDone=isGracePassed(t);
-      html+='<div class="task-name">'+(graceDone?'<span style="color:#bbb">'+t.name+'</span>':t.name)+'</div>';
+      html+='<div class="task-name">'+(graceDone?'<span style="color:#bbb">'+t.name+'</span>':t.name)+(t.weekly?'<span class="weekly-badge">주1회</span>':'')+'</div>';
       if(t.tag||t.deadline){
         html+='<div class="task-tag">';
         if(t.tag)html+=t.tag;
@@ -2467,6 +2566,7 @@ function addTask(){
   var name=document.getElementById('new-name').value.trim();
   var pts=parseInt(document.getElementById('new-pts').value);
   var tag=document.getElementById('new-tag').value.trim();
+  var weekly=!!(document.getElementById('new-weekly')&&document.getElementById('new-weekly').checked);
   var deadline=document.getElementById('new-deadline').value||'';
   if(!name){toast('이름을 입력해주세요');return;}
   if(isNaN(pts)||pts===0){toast('포인트를 입력해주세요');return;}
@@ -2475,12 +2575,13 @@ function addTask(){
   if(!days.length)days=[0,1,2,3,4,5,6];
   var who='both';
   document.querySelectorAll('#new-who-btns .who-btn.on').forEach(function(b){who=b.getAttribute('data-who');});
-  S.tasks.push({id:'ct'+Date.now(),icon:selEmoji,name:name,pts:pts,group:'➕ 추가',tag:tag,days:days,who:who,deadline:deadline,bonusPts:0,bonusLabel:'',graceDeadline:'',gracePts:0});
+  S.tasks.push({id:'ct'+Date.now(),icon:selEmoji,name:name,pts:pts,group:'➕ 추가',tag:tag,days:days,who:who,weekly:weekly,deadline:weekly?'':deadline,bonusPts:0,bonusLabel:'',graceDeadline:weekly?'':(document.getElementById('new-grace-deadline').value||''),gracePts:weekly?0:(parseInt(document.getElementById('new-grace-pts').value)||0),gracePts:0});
   // 입력 초기화
   document.getElementById('new-name').value='';
   document.getElementById('new-pts').value='';
   document.getElementById('new-tag').value='';
   document.getElementById('new-deadline').value='';
+  if(document.getElementById('new-weekly'))document.getElementById('new-weekly').checked=false;toggleNewWeekly();if(document.getElementById('new-grace-deadline'))document.getElementById('new-grace-deadline').value='';if(document.getElementById('new-grace-pts'))document.getElementById('new-grace-pts').value='';
   setNewDays(true);setNewWho('both');
   syncSave();renderTasks();toast('할일 추가: '+name);
   // 계속 추가 체크 안 했으면 폼 닫기
@@ -2500,7 +2601,8 @@ function renameGroup(input){var ci=parseInt(input.getAttribute('data-ci'));var o
 function deleteGroup(ci){var name=S.customGroups[ci];confirm2('그룹 삭제','"'+name+'" 그룹을 삭제할까요? 해당 그룹의 할일은 추가 그룹으로 이동됩니다.','삭제',true,function(){S.tasks.forEach(function(t){if(t.group===name)t.group='➕ 추가';});S.customGroups.splice(ci,1);syncSave();renderGroupList();renderTasks();toast('그룹 삭제됨');});}
 
 /* 할일 수정 모달 */
-function openTaskModal(id){if(!isAdmin())return;var t=null;for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].id===id){t=S.tasks[i];break;}}if(!t)return;mTaskId=id;mSelEmoji=t.icon;var gSel=document.getElementById('m-group');gSel.innerHTML=getGroups().map(function(g){return '<option value="'+g+'"'+(g===(t.group||'➕ 추가')?' selected':'')+'>'+g+'</option>';}).join('');document.getElementById('m-name').value=t.name;document.getElementById('m-pts').value=t.pts;document.getElementById('m-tag').value=t.tag||'';document.getElementById('m-deadline').value=t.deadline||'';document.getElementById('m-bonus-pts').value=t.bonusPts||'';document.getElementById('m-bonus-label').value=t.bonusLabel||'';document.getElementById('m-grace-deadline').value=t.graceDeadline||'';setTaskScope('all');document.getElementById('m-grace-pts').value=t.gracePts||0;var gf=document.getElementById('grace-field');if(gf)gf.style.display=t.deadline?'':'none';var days=t.days&&t.days.length?t.days:[0,1,2,3,4,5,6];document.querySelectorAll('#modal-day-btns .day-btn').forEach(function(btn){var dow=parseInt(btn.getAttribute('data-dow'));btn.className='day-btn'+(days.indexOf(dow)>-1?' on':'');btn.onclick=function(){toggleDayBtn(this);};});var who=t.who||'both';document.querySelectorAll('#modal-who-btns .who-btn').forEach(function(btn){var w=btn.getAttribute('data-who');var extra=w==='ian'?' who-ian':w==='logan'?' who-logan':'';btn.className='who-btn'+extra+(w===who?' on':'');});renderEmoji('modal-emoji',t.icon,function(e){mSelEmoji=e;});var whoField=document.getElementById('modal-who-field');if(whoField)whoField.style.display=userCount()<2?'none':'';document.getElementById('task-modal').classList.add('show');}
+function openTaskModal(id){if(!isAdmin())return;var t=null;for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].id===id){t=S.tasks[i];break;}}if(!t)return;mTaskId=id;mSelEmoji=t.icon;var gSel=document.getElementById('m-group');gSel.innerHTML=getGroups().map(function(g){return '<option value="'+g+'"'+(g===(t.group||'➕ 추가')?' selected':'')+'>'+g+'</option>';}).join('');document.getElementById('m-name').value=t.name;document.getElementById('m-pts').value=t.pts;document.getElementById('m-tag').value=t.tag||'';document.getElementById('m-deadline').value=t.deadline||'';document.getElementById('m-bonus-pts').value=t.bonusPts||'';document.getElementById('m-bonus-label').value=t.bonusLabel||'';document.getElementById('m-grace-deadline').value=t.graceDeadline||'';
+  document.getElementById('m-weekly').checked=!!(t.weekly);toggleWeeklyMode();setTaskScope('all');document.getElementById('m-grace-pts').value=t.gracePts||0;var gf=document.getElementById('grace-field');if(gf)gf.style.display=t.deadline?'':'none';var days=t.days&&t.days.length?t.days:[0,1,2,3,4,5,6];document.querySelectorAll('#modal-day-btns .day-btn').forEach(function(btn){var dow=parseInt(btn.getAttribute('data-dow'));btn.className='day-btn'+(days.indexOf(dow)>-1?' on':'');btn.onclick=function(){toggleDayBtn(this);};});var who=t.who||'both';document.querySelectorAll('#modal-who-btns .who-btn').forEach(function(btn){var w=btn.getAttribute('data-who');var extra=w==='ian'?' who-ian':w==='logan'?' who-logan':'';btn.className='who-btn'+extra+(w===who?' on':'');});renderEmoji('modal-emoji',t.icon,function(e){mSelEmoji=e;});var whoField=document.getElementById('modal-who-field');if(whoField)whoField.style.display=userCount()<2?'none':'';document.getElementById('task-modal').classList.add('show');}
 function toggleDayBtn(btn){btn.classList.toggle('on');}
 function setAllDays(on){document.querySelectorAll('#modal-day-btns .day-btn').forEach(function(b){if(on)b.classList.add('on');else b.classList.remove('on');});}
 var _taskScope='all'; // 기본: 전체 반영
@@ -2514,6 +2616,34 @@ function setTaskScope(scope){
     b.style.color=active?'#fff':'#555';
     b.style.borderColor=active?'#1a1a1a':'#d3d1c7';
   });
+}
+function toggleNewWeekly(){
+  var isW=!!(document.getElementById('new-weekly')&&document.getElementById('new-weekly').checked);
+  var wrap=document.getElementById('new-deadline-wrap');
+  if(wrap){wrap.style.opacity=isW?'0.35':'1';wrap.style.pointerEvents=isW?'none':'auto';}
+  if(isW){
+    var dl=document.getElementById('new-deadline');if(dl)dl.value='';
+    var gd=document.getElementById('new-grace-deadline');if(gd)gd.value='';
+    var gp=document.getElementById('new-grace-pts');if(gp)gp.value='';
+    toggleNewGrace();
+  }
+}
+function toggleNewGrace(){
+  var dl=document.getElementById('new-deadline');
+  var gw=document.getElementById('new-grace-wrap');
+  if(gw)gw.style.display=(dl&&dl.value)?'block':'none';
+}
+function toggleWeeklyMode(){
+  var isW=document.getElementById('m-weekly').checked;
+  var dgf=document.getElementById('deadline-grace-fields');
+  if(dgf)dgf.style.opacity=isW?'0.3':'1';
+  if(dgf)dgf.style.pointerEvents=isW?'none':'auto';
+  if(isW){
+    document.getElementById('m-deadline').value='';
+    document.getElementById('m-grace-deadline').value='';
+    document.getElementById('m-grace-pts').value='';
+    toggleGraceField();
+  }
 }
 function toggleGraceField(){
   var dl=document.getElementById('m-deadline');
@@ -2544,7 +2674,9 @@ function setWho(who){
     b.className='who-btn'+extra+(w===who?' on':'');
   });
 }
-function saveTaskModal(){if(!mTaskId)return;var name=document.getElementById('m-name').value.trim();var pts=parseInt(document.getElementById('m-pts').value);var tag=document.getElementById('m-tag').value.trim();if(!name||isNaN(pts))return;var days=[];document.querySelectorAll('#modal-day-btns .day-btn.on').forEach(function(b){days.push(parseInt(b.getAttribute('data-dow')));});if(!days.length)days=[0,1,2,3,4,5,6];var who='both';document.querySelectorAll('#modal-who-btns .who-btn.on').forEach(function(b){who=b.getAttribute('data-who');});for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].id===mTaskId){S.tasks[i].name=name;S.tasks[i].pts=pts;S.tasks[i].icon=mSelEmoji;S.tasks[i].group=document.getElementById('m-group').value||'➕ 추가';S.tasks[i].tag=tag;S.tasks[i].days=days;S.tasks[i].who=who;S.tasks[i].deadline=document.getElementById('m-deadline').value||'';S.tasks[i].bonusPts=parseInt(document.getElementById('m-bonus-pts').value)||0;S.tasks[i].bonusLabel=document.getElementById('m-bonus-label').value.trim();S.tasks[i].graceDeadline=document.getElementById('m-grace-deadline').value||'';S.tasks[i].gracePts=parseInt(document.getElementById('m-grace-pts').value)||0;break;}}// 적용 범위 처리
+function saveTaskModal(){if(!mTaskId)return;var name=document.getElementById('m-name').value.trim();var pts=parseInt(document.getElementById('m-pts').value);var tag=document.getElementById('m-tag').value.trim();if(!name||isNaN(pts))return;var days=[];document.querySelectorAll('#modal-day-btns .day-btn.on').forEach(function(b){days.push(parseInt(b.getAttribute('data-dow')));});if(!days.length)days=[0,1,2,3,4,5,6];var who='both';document.querySelectorAll('#modal-who-btns .who-btn.on').forEach(function(b){who=b.getAttribute('data-who');});for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].id===mTaskId){S.tasks[i].name=name;S.tasks[i].pts=pts;S.tasks[i].icon=mSelEmoji;S.tasks[i].group=document.getElementById('m-group').value||'➕ 추가';S.tasks[i].tag=tag;S.tasks[i].days=days;S.tasks[i].who=who;S.tasks[i].deadline=document.getElementById('m-deadline').value||'';S.tasks[i].bonusPts=parseInt(document.getElementById('m-bonus-pts').value)||0;S.tasks[i].bonusLabel=document.getElementById('m-bonus-label').value.trim();S.tasks[i].graceDeadline=document.getElementById('m-grace-deadline').value||'';S.tasks[i].gracePts=parseInt(document.getElementById('m-grace-pts').value)||0;
+S.tasks[i].weekly=document.getElementById('m-weekly').checked?true:false;
+if(S.tasks[i].weekly){S.tasks[i].deadline='';S.tasks[i].graceDeadline='';S.tasks[i].gracePts=0;}break;}}// 적용 범위 처리
   if(_taskScope==='today'){
     // 오늘만: 오늘 날짜에 taskOverride 저장
     var todayK=todayStr();
@@ -3493,6 +3625,19 @@ function autoConfirmToday(){
     var hasLogan=S.history.some(function(h){return h.who==='logan'&&h.type==='confirm'&&h.name.indexOf(todayKey)>-1;});
     if(ianPts>0&&!hasIan){S.history.unshift({who:'ian',pts:ianPts,name:'확정 '+todayKey,type:'confirm',time:ts});}
     if(loganPts>0&&!hasLogan){S.history.unshift({who:'logan',pts:loganPts,name:'확정 '+todayKey,type:'confirm',time:ts});}
+    // 주1회 항목 자동 확정
+    var wk5=getWeekKey();
+    ['ian','logan'].forEach(function(who2){
+      if(who2==='logan'&&userCount()<2)return;
+      if(!S.weeklyChecks||!S.weeklyChecks[wk5])return;
+      S.tasks.forEach(function(t){
+        if(!t.weekly)return;
+        if(!(S.weeklyChecks[wk5][t.id]&&S.weeklyChecks[wk5][t.id][who2]))return;
+        var wLabel='주1회확정 '+wk5+'_'+t.id;
+        var already=S.history.some(function(h){return h.who===who2&&h.name===wLabel;});
+        if(!already){S.history.unshift({who:who2,pts:t.pts,name:wLabel,type:'confirm',time:ts});}
+      });
+    });
     if(!d.confirmed){
       d.confirmed=true;
       if(!d.snap){
