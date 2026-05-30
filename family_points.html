@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v1.1.11 | Family Points App | Release 2026-05-30 -->
+<!-- 가족포인트앱 v1.1.12 | Family Points App | Release 2026-05-30 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -1003,7 +1003,7 @@ function ucLight(who){
 }
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='1.1.11';
+var APP_VERSION='1.1.12';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1rHjta_5QdDjB9TT8IBDg4QcrjOuUhstmMmnHWr6EyP8'; // 운영 시트 (sheetId 없을 때 기본값)
 function getDefaultSheetId(){
@@ -2516,7 +2516,20 @@ function renderTasks(){
       }
       html+='</div></div>';
       var graceActive=isGracePeriod(t);
-      var dispPts=graceActive&&t.gracePts>0?t.gracePts:t.pts;
+      // 체크 상태에 따라 포인트 표시
+      // 기본 체크됨 → t.pts, 유예 체크됨 → t.gracePts, 미체크 → 현재 시간 기준
+      var _ianGrace=(d.ian||{})[t.id+'_grace'],_loganGrace=(d.logan||{})[t.id+'_grace'];
+      var _ianChecked=(d.ian||{})[t.id],_loganChecked=(d.logan||{})[t.id];
+      var _anyGrace=_ianGrace||_loganGrace;
+      var _anyBasic=(_ianChecked&&!_ianGrace)||(_loganChecked&&!_loganGrace);
+      var dispPts;
+      if(_anyGrace&&!_anyBasic){
+        dispPts=t.gracePts>0?t.gracePts:t.pts; // 유예 체크만
+      }else if(_anyBasic){
+        dispPts=t.pts; // 기본 체크 있음
+      }else{
+        dispPts=graceActive&&t.gracePts>0?t.gracePts:t.pts; // 미체크: 현재 시간 기준
+      }
       html+='<span class="task-pts" style="color:'+(graceActive?'#F5A623':dispPts<0?'#E57373':'#1a1a1a')+'">';
       html+=(dispPts>0?'+':'')+dispPts;
       if(graceActive)html+=' <span style="font-size:9px">⬇️</span>';
