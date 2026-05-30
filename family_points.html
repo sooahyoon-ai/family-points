@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v1.1.6 | Family Points App | Release 2026-05-30 -->
+<!-- 가족포인트앱 v1.1.11 | Family Points App | Release 2026-05-30 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -1003,7 +1003,7 @@ function ucLight(who){
 }
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='1.1.6';
+var APP_VERSION='1.1.11';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1rHjta_5QdDjB9TT8IBDg4QcrjOuUhstmMmnHWr6EyP8'; // 운영 시트 (sheetId 없을 때 기본값)
 function getDefaultSheetId(){
@@ -1162,8 +1162,10 @@ function syncLoad(onDone){
         // 서버 데이터 사용
         var remoteJSON=JSON.stringify(remote);
         var localJSON=JSON.stringify(S);
+        var _wc=S.weeklyChecks||{};
         S=remote;
         patchState(S); // 신규 필드 기본값 보완
+        if(!S.weeklyChecks||Object.keys(S.weeklyChecks).length===0)S.weeklyChecks=_wc;
         // save() 대신 직접 저장 (lastModified 덮어쓰기 방지)
         saveLocal(); // lastModified 유지
         lastSyncedJSON=JSON.stringify(S);
@@ -2266,6 +2268,44 @@ function deleteSelected(){
 
 /* ── 드래그 ──────────────────────────────────────────── */
 var dragId=null;
+var _touchDragId=null,_touchDragEl=null,_touchTargetId=null,_touchPos=null;
+function taskTouchStart(e){
+  if(!manageMode)return;
+  _touchDragId=e.currentTarget.getAttribute('data-id');
+  _touchDragEl=e.currentTarget;
+  _touchDragEl.style.opacity='0.5';
+}
+function taskTouchMove(e){
+  if(!_touchDragId)return;
+  e.preventDefault();
+  var touch=e.touches[0];
+  var els=document.querySelectorAll('.task-item[data-id]');
+  els.forEach(function(el){
+    if(el.getAttribute('data-id')===_touchDragId)return;
+    var rect=el.getBoundingClientRect();
+    if(touch.clientY>rect.top&&touch.clientY<rect.bottom){
+      _touchTargetId=el.getAttribute('data-id');
+      _touchPos=touch.clientY<rect.top+rect.height/2?'above':'below';
+    }
+  });
+}
+function taskTouchEnd(e){
+  if(!_touchDragId)return;
+  if(_touchDragEl)_touchDragEl.style.opacity='1';
+  if(_touchTargetId&&_touchTargetId!==_touchDragId){
+    var fi=-1,ti=-1;
+    S.tasks.forEach(function(t,i){if(t.id===_touchDragId)fi=i;if(t.id===_touchTargetId)ti=i;});
+    if(fi>=0&&ti>=0){
+      var tg=S.tasks[ti].group;
+      var item=S.tasks.splice(fi,1)[0];
+      item.group=tg;
+      ti=S.tasks.findIndex(function(t){return t.id===_touchTargetId;});
+      S.tasks.splice(_touchPos==='above'?ti:ti+1,0,item);
+      syncSave();renderTasks();
+    }
+  }
+  _touchDragId=null;_touchDragEl=null;_touchTargetId=null;_touchPos=null;
+}
 function taskDragStart(e){
   if(!manageMode)return;
   dragId=e.currentTarget.getAttribute('data-id');
@@ -2444,14 +2484,17 @@ function renderTasks(){
       html+=' ondragend="taskDragEnd(event)"';
       html+=' ondragover="taskDragOver(event)"';
       html+=' ondragleave="taskDragLeave(event)"';
-      html+=' ondrop="taskDrop(event)">';
+      html+=' ondrop="taskDrop(event)"';
+      html+=' ontouchstart="taskTouchStart(event)"';
+      html+=' ontouchmove="taskTouchMove(event)"';
+      html+=' ontouchend="taskTouchEnd(event)">';
       html+='<span class="drag-handle">⠿</span>';
       html+='<input type="checkbox" class="task-cb" data-id="'+t.id+'" onchange="toggleSelEl(this)">';
       html+='<div class="task-left"><div class="task-icon">'+t.icon+'</div>';
       html+='<div style="min-width:0">';
       var graceNow=isGracePeriod(t);
       var graceDone=isGracePassed(t);
-      html+='<div class="task-name">'+(graceDone?'<span style="color:#bbb">'+t.name+'</span>':t.name)+(t.weekly?'<span class="weekly-badge">주1회</span>':'')+'</div>';
+      html+='<div class="task-name">'+(graceDone?'<span style="color:#bbb">'+t.name+'</span>':t.name)+(t.weekly?'<span class="weekly-badge">(주1회)</span>':'')+'</div>';
       if(t.tag||t.deadline){
         html+='<div class="task-tag">';
         if(t.tag)html+=t.tag;
@@ -3405,8 +3448,10 @@ function forceLoadFromServer(){
         }
         var remote=JSON.parse(text);
         remote.opts.admin=false;
+        var _wc2=S.weeklyChecks||{};
         S=remote;
         patchState(S);
+        if(!S.weeklyChecks||Object.keys(S.weeklyChecks).length===0)S.weeklyChecks=_wc2;
         try{sSet(KEY,JSON.stringify(S));}catch(e){}
         lastSyncedJSON=JSON.stringify(S);
         setSyncStatus('loaded');
@@ -3611,6 +3656,24 @@ function fixMissingHistory(){
         ianBefore:0,loganBefore:0,modIan:null,modLogan:null};
     }
   });
+  // weekly 누락 history도 복구 (현재 주만)
+  var wkNow=getWeekKey();
+  if(S.weeklyChecks&&S.weeklyChecks[wkNow]){
+    ['ian','logan'].forEach(function(who3){
+      if(who3==='logan'&&userCount()<2)return;
+      S.tasks.forEach(function(t){
+        if(!t.weekly)return;
+        if(!(S.weeklyChecks[wkNow][t.id]&&S.weeklyChecks[wkNow][t.id][who3]))return;
+        var wLabel='주1회확정 '+wkNow+'_'+t.id;
+        var already=S.history.some(function(h){return h.who===who3&&h.name===wLabel;});
+        if(!already){
+          var now2=new Date();
+          var ts2=now2.toLocaleDateString('ko-KR')+' '+now2.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+          S.history.unshift({who:who3,pts:t.pts,name:wLabel,type:'confirm',time:ts2});
+        }
+      });
+    });
+  }
 }
 function autoConfirmToday(){
   // 오늘 날짜 확정: 체크한 포인트를 history에 추가
