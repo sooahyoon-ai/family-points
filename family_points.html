@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v1.1.12 | Family Points App | Release 2026-05-30 -->
+<!-- 가족포인트앱 v1.1.14 | Family Points App | Release 2026-05-30 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -1003,7 +1003,7 @@ function ucLight(who){
 }
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='1.1.12';
+var APP_VERSION='1.1.14';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1rHjta_5QdDjB9TT8IBDg4QcrjOuUhstmMmnHWr6EyP8'; // 운영 시트 (sheetId 없을 때 기본값)
 function getDefaultSheetId(){
@@ -1955,7 +1955,10 @@ function toggleBonusEl(btn){
   // 체크가 확인(체크 ON)된 상태여야 보너스 가능
   var base=who==='ian'?(d.snap&&d.snap.baseIan||{}):(d.snap&&d.snap.baseLogan||{});
   var mod=who==='ian'?(d.snap&&d.snap.modIan||{}):(d.snap&&d.snap.modLogan||{});
-  var isChecked=(d[who]||{})[tid]||(base&&base[tid])||(mod&&mod[tid]);
+  // 주1회 항목은 weeklyChecks에서 확인
+  var _wk7=getWeekKey();
+  var _weeklyChecked=t.weekly&&S.weeklyChecks&&S.weeklyChecks[_wk7]&&S.weeklyChecks[_wk7][tid]&&S.weeklyChecks[_wk7][tid][who];
+  var isChecked=(d[who]||{})[tid]||(base&&base[tid])||(mod&&mod[tid])||_weeklyChecked;
   if(!isChecked){toast('먼저 할일을 완료해야 보너스를 받을 수 있어요!');return;}
   var bonusKey=tid+'_bonus';
   if(d[who][bonusKey]){
@@ -2269,11 +2272,13 @@ function deleteSelected(){
 /* ── 드래그 ──────────────────────────────────────────── */
 var dragId=null;
 var _touchDragId=null,_touchDragEl=null,_touchTargetId=null,_touchPos=null;
-function taskTouchStart(e){
+function taskTouchStart(e,handle){
   if(!manageMode)return;
-  _touchDragId=e.currentTarget.getAttribute('data-id');
-  _touchDragEl=e.currentTarget;
-  _touchDragEl.style.opacity='0.5';
+  e.stopPropagation();
+  var el=handle?handle.closest('.task-item'):e.currentTarget;
+  _touchDragId=el?el.getAttribute('data-id'):null;
+  _touchDragEl=el;
+  if(_touchDragEl)_touchDragEl.style.opacity='0.5';
 }
 function taskTouchMove(e){
   if(!_touchDragId)return;
@@ -2484,11 +2489,8 @@ function renderTasks(){
       html+=' ondragend="taskDragEnd(event)"';
       html+=' ondragover="taskDragOver(event)"';
       html+=' ondragleave="taskDragLeave(event)"';
-      html+=' ondrop="taskDrop(event)"';
-      html+=' ontouchstart="taskTouchStart(event)"';
-      html+=' ontouchmove="taskTouchMove(event)"';
-      html+=' ontouchend="taskTouchEnd(event)">';
-      html+='<span class="drag-handle">⠿</span>';
+      html+=' ondrop="taskDrop(event)">';
+      html+='<span class="drag-handle" ontouchstart="taskTouchStart(event,this)" ontouchmove="taskTouchMove(event)" ontouchend="taskTouchEnd(event)">⠿</span>';
       html+='<input type="checkbox" class="task-cb" data-id="'+t.id+'" onchange="toggleSelEl(this)">';
       html+='<div class="task-left"><div class="task-icon">'+t.icon+'</div>';
       html+='<div style="min-width:0">';
@@ -2538,10 +2540,13 @@ function renderTasks(){
       if(t.bonusPts>0&&!isMod&&!isM&&(!graceActive||isAdmin())){
         var d2=DD();
         // 체크 여부: raw 체크 or 확정된 snap 기준
+        var _wk6=getWeekKey();
         var ianChecked=(d2.ian||{})[t.id]||
-          (d2.confirmed&&d2.snap&&((d2.snap.baseIan||{})[t.id]||(d2.snap.modIan||{})[t.id]));
+          (d2.confirmed&&d2.snap&&((d2.snap.baseIan||{})[t.id]||(d2.snap.modIan||{})[t.id]))||
+          (t.weekly&&S.weeklyChecks&&S.weeklyChecks[_wk6]&&S.weeklyChecks[_wk6][t.id]&&S.weeklyChecks[_wk6][t.id].ian);
         var loganChecked=(d2.logan||{})[t.id]||
-          (d2.confirmed&&d2.snap&&((d2.snap.baseLogan||{})[t.id]||(d2.snap.modLogan||{})[t.id]));
+          (d2.confirmed&&d2.snap&&((d2.snap.baseLogan||{})[t.id]||(d2.snap.modLogan||{})[t.id]))||
+          (t.weekly&&S.weeklyChecks&&S.weeklyChecks[_wk6]&&S.weeklyChecks[_wk6][t.id]&&S.weeklyChecks[_wk6][t.id].logan);
         var tw2=t.who||'both';
         var ianBonus=(d2.ian||{})[t.id+'_bonus'];
         var loganBonus=(d2.logan||{})[t.id+'_bonus'];
