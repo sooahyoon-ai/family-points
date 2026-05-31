@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v1.1.20 | Family Points App | Release 2026-05-30 -->
+<!-- 가족포인트앱 v1.1.21 | Family Points App | Release 2026-05-30 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -547,7 +547,8 @@ input:checked+.toggle-sl:before{transform:translateX(18px);}
 
     <!-- 옵션 -->
     <div id="panel-options" class="panel">
-    <div style="display:flex;justify-content:flex-end;padding:8px 0 0 0">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0 0 0">
+      <span style="font-size:11px;color:#ccc" id="version-lbl">가족포인트앱 v<span id="version-num"></span></span>
       <button onclick="showHelp()" style="padding:6px 14px;border-radius:20px;border:1px solid #1D9E75;background:#E1F5EE;color:#085041;font-size:13px;cursor:pointer;-webkit-appearance:none">❓ 도움말</button>
     </div>
       <div class="opt-sec">
@@ -607,7 +608,6 @@ input:checked+.toggle-sl:before{transform:translateX(18px);}
 
           </div>
         </div>
-          <div style="text-align:center;margin-top:16px;font-size:11px;color:#ccc" id="version-lbl">가족포인트앱 v<span id="version-num"></span></div>
       </div>
       <div class="opt-sec">
         <div class="opt-title">날짜 이동</div>
@@ -1013,7 +1013,7 @@ function ucLight(who){
 }
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='1.1.20';
+var APP_VERSION='1.1.21';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1rHjta_5QdDjB9TT8IBDg4QcrjOuUhstmMmnHWr6EyP8'; // 운영 시트 (sheetId 없을 때 기본값)
 function getDefaultSheetId(){
@@ -2631,7 +2631,7 @@ function renderTasks(){
 }
 
 /* ── 할일 추가/수정 */
-function toggleAddForm(){if(!isAdmin()){toast('관리자 모드에서만 사용할 수 있어요.');return;}if(!addOpen){addOpen=true;document.getElementById('add-form-wrap').style.display='block';document.getElementById('toggle-add-btn').textContent='✕ 닫기';renderEmoji('emoji-pick',selEmoji,function(e){selEmoji=e;var ep=document.getElementById('emoji-preview');if(ep)ep.textContent=e;});var ep2=document.getElementById('emoji-preview');if(ep2)ep2.textContent=selEmoji;var nwf=document.getElementById('new-who-field');if(nwf)nwf.style.display=userCount()<2?'none':'';
+function toggleAddForm(){if(!isAdmin()){toast('관리자 모드에서만 사용할 수 있어요.');return;}if(!addOpen){addOpen=true;document.getElementById('add-form-wrap').style.display='block';document.getElementById('toggle-add-btn').textContent='✕ 닫기';renderEmoji('emoji-pick',selEmoji,function(e){selEmoji=e;});var nwf=document.getElementById('new-who-field');if(nwf)nwf.style.display=userCount()<2?'none':'';
   // 그룹 select 갱신
   var gSel=document.getElementById('new-group');if(gSel){gSel.innerHTML=getGroups().map(function(g){return '<option value="'+g+'">'+g+'</option>';}).join('');}
   // 스크롤 상단으로 이동 (add-form-wrap이 보이도록)
@@ -2714,14 +2714,7 @@ function toggleEmojiMore(btn,cid){
   mores.forEach(function(e){e.style.display=isOpen?'none':'';});
   btn.textContent=isOpen?'▾':'▴';
 }
-function toggleEmojiPick(){
-  var pick=document.getElementById('emoji-pick');
-  var btn=document.getElementById('emoji-toggle-btn');
-  if(!pick)return;
-  var isOpen=pick.style.display!=='none';
-  pick.style.display=isOpen?'none':'';
-  if(btn)btn.textContent=isOpen?'펼치기 ▾':'접기 ▴';
-}
+
 function toggleNewWeekly(){
   var isW=!!(document.getElementById('new-weekly')&&document.getElementById('new-weekly').checked);
   var wrap=document.getElementById('new-deadline-wrap');
