@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v1.1.82 | Family Points App | Release 2026-05-30 -->
+<!-- 가족포인트앱 v1.2.5 | Family Points App | Release 2026-05-30 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -86,8 +86,8 @@ h1{font-size:15px;font-weight:700;text-align:center;margin-bottom:.5rem;color:#0
 .single-user .check-area{grid-template-columns:44px;justify-items:end;}
 .check-area button,.check-area span{justify-self:center;}
 .task-item.is-edit .check-area{display:none;}
-.edit-area{display:none;grid-template-columns:44px 44px;gap:3px;flex-shrink:0;align-items:center;}
-.task-item.is-edit .edit-area{display:grid;}
+.edit-area{display:none;flex-wrap:wrap;gap:3px;flex-shrink:0;align-items:center;justify-content:flex-end;max-width:140px;}
+.task-item.is-edit .edit-area{display:flex !important;}
 .cbtn{padding:5px 0;border-radius:8px;border:1px solid #e0e0d8;background:#f5f5f3;cursor:pointer;font-size:11px;font-weight:700;white-space:nowrap;-webkit-appearance:none;color:#ccc;width:44px;text-align:center;flex-shrink:0;}
 .cbtn:disabled{cursor:default;opacity:.55;}
 .cbtn-expired{opacity:.55;}
@@ -97,7 +97,7 @@ h1{font-size:15px;font-weight:700;text-align:center;margin-bottom:.5rem;color:#0
 .cbtn.ian-conf{background:var(--color1);border-color:var(--color1);color:#fff;}
 .cbtn.logan-sel{background:var(--color2-bg);border-color:var(--color2);color:var(--color2);}
 .cbtn.logan-conf{background:var(--color2);border-color:var(--color2);color:#fff;}
-.mbtn{padding:5px 0;border-radius:8px;border:1px solid #e0e0d8;background:#f5f5f3;cursor:pointer;font-size:11px;font-weight:700;white-space:nowrap;-webkit-appearance:none;color:#ccc;width:44px;text-align:center;flex-shrink:0;}
+.mbtn{padding:5px 4px;border-radius:8px;border:1px solid #e0e0d8;background:#f5f5f3;cursor:pointer;font-size:11px;font-weight:700;white-space:nowrap;-webkit-appearance:none;color:#ccc;min-width:44px;text-align:center;flex-shrink:0;}
 .mbtn:disabled{cursor:default;opacity:.55;}
 .mbtn.ian-kept{background:var(--color1);border-color:var(--color1);color:#fff;opacity:.6;}
 .mbtn.logan-kept{background:var(--color2);border-color:var(--color2);color:#fff;opacity:.6;}
@@ -1013,7 +1013,7 @@ function ucLight(who){
 }
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='1.1.82';
+var APP_VERSION='1.2.5';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1rHjta_5QdDjB9TT8IBDg4QcrjOuUhstmMmnHWr6EyP8'; // 운영 시트 (sheetId 없을 때 기본값)
 function getDefaultSheetId(){
@@ -1536,6 +1536,63 @@ function getWeekKey(dateObj){
   var ws=getWeekStartDate(d);
   return ws.getFullYear()+'-'+(ws.getMonth()+1)+'-'+ws.getDate();
 }
+
+/* ── 체크 상태 단일 판정 (Single Source of Truth) ──────────────────────────
+   모든 "체크됐나?" 질문은 이 함수들로 통일한다.
+   who: 'ian'|'logan', tid: 항목ID, dateObj: 대상 날짜(기본 vDate)
+   opts.mod: true면 수정모드 중간상태(modIan) 우선 참조
+─────────────────────────────────────────────────────────────────────────── */
+function wkKeyOf(dateObj){ return getWeekKey(dateObj||vDate); }
+
+// 기본 체크 여부
+function isChecked(who, tid, dateObj, opts){
+  opts=opts||{};
+  var dObj=dateObj||vDate;
+  var ds=dStr(dObj);
+  var t=null;for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].id===tid){t=S.tasks[i];break;}}
+  if(!t)return false;
+  // 주1회: 항상 weeklyChecks[주키] 기준
+  if(t.weekly){
+    if(opts.mod){
+      // 수정모드: snap.modIan 우선 (enterEditMode에서 weeklyChecks→mod 복사됨)
+      var dm=S.dayData[ds];
+      var mod=dm&&dm.snap?(who==='ian'?dm.snap.modIan:dm.snap.modLogan):null;
+      if(mod)return !!mod[tid];
+    }
+    var wk=wkKeyOf(dObj);
+    return !!(S.weeklyChecks&&S.weeklyChecks[wk]&&S.weeklyChecks[wk][tid]&&S.weeklyChecks[wk][tid][who]);
+  }
+  // 일반 항목
+  var d=S.dayData[ds];
+  if(!d)return false;
+  if(ds===todayStr()&&!opts.mod){
+    return !!(d[who]&&d[who][tid]); // 오늘: raw 체크
+  }
+  if(opts.mod&&d.snap){
+    var m=who==='ian'?d.snap.modIan:d.snap.modLogan;
+    if(m)return !!m[tid];
+  }
+  // 과거 확정: snap.baseIan
+  if(d.snap){
+    var b=who==='ian'?d.snap.baseIan:d.snap.baseLogan;
+    if(b&&b[tid])return true;
+  }
+  return !!(d[who]&&d[who][tid]);
+}
+
+// 보너스 체크 여부
+function isBonusChecked(who, tid, dateObj){
+  var dObj=dateObj||vDate;
+  var ds=dStr(dObj);
+  var t=null;for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].id===tid){t=S.tasks[i];break;}}
+  if(!t||!t.bonusPts)return false;
+  if(t.weekly){
+    var wk=wkKeyOf(dObj);
+    return !!(S.weeklyChecks&&S.weeklyChecks[wk]&&S.weeklyChecks[wk][tid]&&S.weeklyChecks[wk][tid][who+'_bonus']);
+  }
+  var d=S.dayData[ds];
+  return !!(d&&d[who]&&d[who][tid+'_bonus']);
+}
 function calcWeeklyPts(who){
   // 이번 주 체크된 주1회 포인트 합산 (기본 + 보너스)
   var wk=getWeekKey();
@@ -1582,10 +1639,15 @@ function weekPts(who){
   return Math.max(0,total);
 }
 function recalcTotal(who){
-  // history 합산 (confirm=+, buy=-, refund=+, weekly 제외)
+  // history 합산 (confirm=+, buy=-, refund=+)
+  // 현재 주의 '주1회확정'은 제외 (calcWeeklyPts가 실시간 계산하므로 중복 방지)
+  var curWk=getWeekKey();
+  var curWkPrefix='주1회확정 '+curWk+'_';
   return S.history.reduce(function(sum,h){
     if(h.who!==who)return sum;
-    if(h.type==='weekly')return sum; // weekly는 별도 계산
+    if(h.type==='weekly')return sum;
+    // 현재 주 주1회확정은 calcWeeklyPts가 담당 → 제외
+    if(h.name&&h.name.indexOf(curWkPrefix)===0)return sum;
     return sum+h.pts;
   },0);
 }
@@ -1958,11 +2020,10 @@ function toggleBonusEl(btn){
   var tid=btn.getAttribute('data-id');
   var t=null;for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].id===tid){t=S.tasks[i];break;}}
   if(!t||!t.bonusPts)return;
-  // 과거 확정 날짜에서 수정모드 없이 보너스 클릭 방지
+  // 과거 날짜는 수정 모드에서만 보너스 변경 가능 (오늘은 일반 모드 허용)
   if(!isToday()&&!modifyMode){
     toast('✏️ 수정 버튼을 눌러주세요');return;
   }
-  // 과거 날짜 비관리자 방지
   var realToday=new Date();
   var realTodayStr=realToday.getFullYear()+'-'+(realToday.getMonth()+1)+'-'+realToday.getDate();
   var vDateStr=vDate.getFullYear()+'-'+(vDate.getMonth()+1)+'-'+vDate.getDate();
@@ -1982,7 +2043,7 @@ function toggleBonusEl(btn){
   var bonusKey=tid+'_bonus';
   if(t.weekly){
     // 주1회 항목: weeklyChecks에 보너스 저장
-    var _wkB=getWeekKey();
+    var _wkB=getWeekKey(vDate);
     if(!S.weeklyChecks)S.weeklyChecks={};
     if(!S.weeklyChecks[_wkB])S.weeklyChecks[_wkB]={};
     if(!S.weeklyChecks[_wkB][tid])S.weeklyChecks[_wkB][tid]={};
@@ -2093,23 +2154,23 @@ function toggleModCheck(who,tid){
     var wLabel='주1회확정 '+_wkM+'_'+tid;
     var _bonusPts=(S.weeklyChecks&&S.weeklyChecks[_wkM]&&S.weeklyChecks[_wkM][tid]&&S.weeklyChecks[_wkM][tid][who+'_bonus']&&t_m.bonusPts)?t_m.bonusPts:0;
     if(S.weeklyChecks[_wkM][tid][who]){
-      // 해제
+      // 해제: weeklyChecks에서 제거 (history는 건드리지 않음)
       delete S.weeklyChecks[_wkM][tid][who];
       delete S.weeklyChecks[_wkM][tid][who+'_bonus'];
       if(modObj2){delete modObj2[tid];}
-      // 항상 history에서 제거 (이번 주 포함)
-      S.history=S.history.filter(function(h){return !(h.who===who&&h.name===wLabel);});
     }else{
-      // 체크
+      // 체크: weeklyChecks에 저장
       S.weeklyChecks[_wkM][tid][who]=Date.now();
       if(modObj2)modObj2[tid]=true;
-      // 지난주: 즉시 반영 안 함 → 재확정(confirmDay) 시에만 history 추가
     }
+    // 이번 주: calcWeeklyPts가 실시간 반영. 지난주: 재확정(confirmDay) 시 반영.
+    // 어느 경우든 toggle 시점에 history를 직접 건드리지 않음 (체크·해제 대칭)
     syncSave();renderTasks();updateBoard();return;
   }
   var sn=DD().snap;if(!sn)return;
   var mod=who==='ian'?sn.modIan:sn.modLogan;if(!mod)return;
-  if(mod[tid])delete mod[tid];else mod[tid]=true;syncSave();renderTasks();
+  if(mod[tid])delete mod[tid];else mod[tid]=true;
+  syncSave();renderTasks();updateBoard();
 }
 
 /* ── 확정 / 재확정 ───────────────────────────────────── */
@@ -2229,9 +2290,10 @@ function confirmDay(){
     S.tasks.forEach(function(t){
       if(!t.weekly)return;
       var chkd=chkObj[t.id]||(wkChecks[t.id]&&wkChecks[t.id][who3]);
-      if(!chkd)return;
       var wLabel='주1회확정 '+_vWk2+'_'+t.id;
+      // 체크 여부와 무관하게 기존 history 먼저 제거 (해제 시 점수 빠지도록)
       S.history=S.history.filter(function(h){return !(h.who===who3&&h.name===wLabel);});
+      if(!chkd)return; // 해제됨 → 제거만 하고 추가 안 함
       var _bonus2=(S.weeklyChecks&&S.weeklyChecks[_vWk2]&&S.weeklyChecks[_vWk2][t.id]&&S.weeklyChecks[_vWk2][t.id][who3+'_bonus']&&t.bonusPts)?t.bonusPts:0;
       S.history.unshift({who:who3,pts:t.pts+_bonus2,name:wLabel,type:'confirm',time:ts});
     });
@@ -2255,12 +2317,15 @@ function enterEditMode(){
   modifyMode=true;
   d.snap.modIan=Object.assign({},d.snap.baseIan||{});
   d.snap.modLogan=Object.assign({},d.snap.baseLogan||{});
-  // 주1회 항목: weeklyChecks 또는 history에서 modIan에 복사
+  // 주1회 항목은 base/mod에서 일단 제거 (일반 체크 데이터와 혼용 방지)
   var _emWk=getWeekKey(vDate);
   var _emWkData=S.weeklyChecks&&S.weeklyChecks[_emWk];
-  // 주1회: vDate 기준 주의 weeklyChecks만 복사 (history 사용 안 함)
   S.tasks.forEach(function(t){
     if(!t.weekly)return;
+    // 우선 초기화
+    delete d.snap.baseIan[t.id];delete d.snap.modIan[t.id];
+    delete d.snap.baseLogan[t.id];delete d.snap.modLogan[t.id];
+    // weeklyChecks(vDate 주)에 실제 체크된 것만 설정
     if(!_emWkData||!_emWkData[t.id])return;
     if(_emWkData[t.id].ian){d.snap.baseIan[t.id]=true;d.snap.modIan[t.id]=true;}
     if(_emWkData[t.id].logan){d.snap.baseLogan[t.id]=true;d.snap.modLogan[t.id]=true;}
@@ -2505,12 +2570,10 @@ function renderTasks(){
   var d=DD(),conf=d.confirmed,sn=d.snap,isM=manageMode,isMod=modifyMode;
 
   function checkCls(who,tid){
-    // 주1회 항목
+    // 주1회 항목: 단일 판정
     var t_w=S.tasks.filter(function(t){return t.id===tid;})[0];
     if(t_w&&t_w.weekly){
-      var _wkV=getWeekKey(vDate); // 현재 보는 날짜 기준
-      var wChecked=S.weeklyChecks&&S.weeklyChecks[_wkV]&&S.weeklyChecks[_wkV][tid]&&S.weeklyChecks[_wkV][tid][who];
-      return wChecked?(who==='ian'?'ian-conf':'logan-conf'):'';
+      return isChecked(who,tid,vDate)?(who==='ian'?'ian-conf':'logan-conf'):'';
     }
     var checkVal=(d[who]||{})[tid];
     if(isToday()){
@@ -2546,14 +2609,19 @@ function renderTasks(){
   }
   function modCls(who,tid){
     if(!sn)return '';
+    var t_mc=S.tasks.filter(function(t){return t.id===tid;})[0];
+    // 주1회: 체크됨/안됨 2상태만 (단일 판정)
+    if(t_mc&&t_mc.weekly){
+      return isChecked(who,tid,vDate,{mod:true})?(who+'-kept'):'';
+    }
+    // 일반 항목: 원래(base) vs 수정(mod) 비교
     var mod=who==='ian'?(sn.modIan||{}):(sn.modLogan||{});
     var base=who==='ian'?(sn.baseIan||{}):(sn.baseLogan||{});
-    // modIan에 있으면 체크됨 (주1회 포함 - enterEditMode에서 복사됨)
     var inM=!!mod[tid];
     var inB=!!base[tid];
-    if(inB&&inM)return who+'-kept';  // 기존 체크 유지
-    if(inB&&!inM)return who+'-rmvd'; // 기존 체크 해제
-    if(!inB&&inM)return who+'-added'; // 새로 추가
+    if(inB&&inM)return who+'-kept';
+    if(inB&&!inM)return who+'-rmvd';
+    if(!inB&&inM)return who+'-added';
     return '';
   }
   function modLbl(who,tid){
@@ -2650,54 +2718,23 @@ function renderTasks(){
       html+=(dispPts>0?'+':'')+dispPts;
       if(graceActive)html+=' <span style="font-size:9px">⬇️</span>';
       html+='</span>';
-      // 보너스 버튼: 보너스 설정 있고 기본 체크 완료된 경우만 표시
-      if(t.bonusPts>0&&!isMod&&!isM&&(!graceActive||isAdmin())){
-        var d2=DD();
-        // 체크 여부: raw 체크 or 확정된 snap 기준
-        var _wk6=getWeekKey(vDate);
-        var _wkCheck=(S.weeklyChecks&&S.weeklyChecks[_wk6]&&S.weeklyChecks[_wk6][t.id])||null;
-        // 보너스 버튼 표시: 기본 체크 여부
-        // 주1회: weeklyChecks[vDate주키] 기준 (수정모드에서도 weeklyChecks에 저장됨)
-        // 일반: d2.ian 또는 snap
-        // 보너스 버튼 표시: 기본 체크 여부
-        var _modIan3=(d2.snap&&d2.snap.modIan)||{};
-        var _modLogan3=(d2.snap&&d2.snap.modLogan)||{};
-        var _baseIan3=(d2.snap&&d2.snap.baseIan)||{};
-        var _baseLogan3=(d2.snap&&d2.snap.baseLogan)||{};
-        var ianChecked;
-        var loganChecked;
-        if(isMod){
-          // 수정 모드: modIan 기반 (주1회 포함, enterEditMode에서 복사됨)
-          ianChecked=!!_modIan3[t.id];
-          loganChecked=!!_modLogan3[t.id];
-        }else if(t.weekly){
-          // 주1회 일반 모드: weeklyChecks 기반
-          ianChecked=_wkCheck&&!!_wkCheck.ian;
-          loganChecked=_wkCheck&&!!_wkCheck.logan;
-        }else{
-          // 일반 항목
-          ianChecked=(d2.ian||{})[t.id]||
-            (d2.snap&&(_baseIan3[t.id]||_modIan3[t.id]));
-          loganChecked=(d2.logan||{})[t.id]||
-            (d2.snap&&(_baseLogan3[t.id]||_modLogan3[t.id]));
-        }
-        var tw2=t.who||'both';
-        var _wkB2=getWeekKey(vDate); // vDate 기준 주키
-        var _wkB2data=S.weeklyChecks&&S.weeklyChecks[_wkB2]&&S.weeklyChecks[_wkB2][t.id];
-        var ianBonus=t.weekly
-          ?(_wkB2data&&_wkB2data['ian_bonus'])
-          :(d2.ian||{})[t.id+'_bonus'];
-        var loganBonus=t.weekly
-          ?(_wkB2data&&_wkB2data['logan_bonus'])
-          :(d2.logan||{})[t.id+'_bonus'];
+      // ── 체크/보너스 상태: 단일 판정 함수 사용 ──
+      var _ckOpts={mod:isMod};
+      var ianChecked=isChecked('ian',t.id,vDate,_ckOpts);
+      var loganChecked=isChecked('logan',t.id,vDate,_ckOpts);
+      var ianBonus=isBonusChecked('ian',t.id,vDate);
+      var loganBonus=isBonusChecked('logan',t.id,vDate);
+      var tw2=t.who||'both';
+      // ── 보너스 버튼 (일반·수정 모드 공통, task-pts 옆 왼쪽 배치) ──
+      if(t.bonusPts>0&&!isM&&(!graceActive||isAdmin())){
         if((tw2==='both'||tw2==='ian')&&ianChecked){
-          var _iBonusCls=isMod?(ianBonus?'mbtn ian-kept':'mbtn ian-added'):'bonus-btn'+(ianBonus?' bonus-done':'');
-          var _iBonusStyle=isMod?'':(ianBonus?'background:'+uc1()+';border-color:'+uc1():'border-color:'+uc1()+';color:'+uc1());
+          var _iBonusCls='bonus-btn'+(ianBonus?' bonus-done':'');
+          var _iBonusStyle=ianBonus?'background:'+uc1()+';border-color:'+uc1()+';color:#fff':'border-color:'+uc1()+';color:'+uc1();
           html+='<button class="'+_iBonusCls+'" data-who="ian" data-id="'+t.id+'" onclick="toggleBonusEl(this)" title="'+(t.bonusLabel||'보너스')+'" style="'+_iBonusStyle+'">🌟+'+(t.bonusPts)+'</button>';
         }
         if((tw2==='both'||tw2==='logan')&&loganChecked){
-          var _lBonusCls=isMod?(loganBonus?'mbtn logan-kept':'mbtn logan-added'):'bonus-btn'+(loganBonus?' bonus-done':'');
-          var _lBonusStyle=isMod?'':(loganBonus?'background:'+uc2()+';border-color:'+uc2():'border-color:'+uc2()+';color:'+uc2());
+          var _lBonusCls='bonus-btn'+(loganBonus?' bonus-done':'');
+          var _lBonusStyle=loganBonus?'background:'+uc2()+';border-color:'+uc2()+';color:#fff':'border-color:'+uc2()+';color:'+uc2();
           html+='<button class="'+_lBonusCls+'" data-who="logan" data-id="'+t.id+'" onclick="toggleBonusEl(this)" title="'+(t.bonusLabel||'보너스')+'" style="'+_lBonusStyle+'">🌟+'+(t.bonusPts)+'</button>';
         }
       }
@@ -2728,17 +2765,6 @@ function renderTasks(){
         if(!isOne2&&(tw==='both'||tw==='logan')){
           html+='<button class="mbtn '+passedMCls+' '+(mCL||'')+'" data-who="logan" data-id="'+t.id+'" onclick="toggleModCheckEl(this)">'+mLL+'</button>';
         }else if(!isOne2){html+='<span></span>';}
-        // 수정 모드 보너스 버튼
-        if(t.bonusPts){
-          if((tw==='both'||tw==='ian')&&ianChecked){
-            var _miBonusCls=ianBonus?'mbtn ian-kept':'mbtn ian-added';
-            html+='<button class="'+_miBonusCls+'" data-who="ian" data-id="'+t.id+'" onclick="toggleBonusEl(this)" title="'+(t.bonusLabel||'보너스')+'">🌟+'+(t.bonusPts)+'</button>';
-          }
-          if(!isOne2&&(tw==='both'||tw==='logan')&&loganChecked){
-            var _mlBonusCls=loganBonus?'mbtn logan-kept':'mbtn logan-added';
-            html+='<button class="'+_mlBonusCls+'" data-who="logan" data-id="'+t.id+'" onclick="toggleBonusEl(this)" title="'+(t.bonusLabel||'보너스')+'">🌟+'+(t.bonusPts)+'</button>';
-          }
-        }
         html+='</div>';
       }else{
         html+='<div class="check-area">';
@@ -3454,8 +3480,12 @@ function showBackupList(){
         var d=new Date(f.updated);
         var dateStr=d.toLocaleDateString('ko-KR')+' '+d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
         var sizeStr=(f.size/1024).toFixed(1)+'KB';
+        var isAuto=(f.type==='auto')||(f.name.indexOf('_auto_')>-1);
+        var badge=isAuto
+          ?'<span style="display:inline-block;padding:1px 6px;border-radius:5px;background:#D5F5E3;color:#1E8449;font-size:10px;font-weight:700;margin-right:5px">자동</span>'
+          :'<span style="display:inline-block;padding:1px 6px;border-radius:5px;background:#EBF5FB;color:#1A5276;font-size:10px;font-weight:700;margin-right:5px">수동</span>';
         html+='<div style="padding:10px 0;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center">';
-        html+='<div><div style="font-weight:600">'+f.name+'</div><div style="color:#888;font-size:11px;margin-top:2px">'+dateStr+' · '+sizeStr+'</div></div>';
+        html+='<div><div style="font-weight:600;font-size:13px">'+badge+f.name+'</div><div style="color:#888;font-size:11px;margin-top:2px">'+dateStr+' · '+sizeStr+'</div></div>';
         html+='<div style="display:flex;gap:4px;flex-shrink:0;margin-left:8px">';
         html+='<button data-fid="'+f.id+'" data-fname="'+f.name+'" onclick="doDownloadFromBtn(this)" style="padding:6px 8px;border-radius:7px;border:1px solid #1A5276;background:#EBF5FB;color:#1A5276;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none">📥</button>';
         html+='<button data-fid="'+f.id+'" data-fname="'+f.name+'" onclick="doRestoreFromBtn(this)" style="padding:6px 8px;border-radius:7px;border:1px solid #E67E22;background:#FEF9E7;color:#784212;font-size:11px;font-weight:700;cursor:pointer;-webkit-appearance:none">복구</button>';
@@ -3831,17 +3861,31 @@ document.addEventListener('visibilitychange',function(){if(document.hidden){flus
 function scheduleMidnight(){
   var now=new Date();
   var ms=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1,0,0,1).getTime()-now.getTime();
-  setTimeout(function(){autoConfirmToday();scheduleMidnight();},ms);
+  setTimeout(function(){autoConfirmToday();cleanOldWeeklyChecks();scheduleMidnight();},ms);
 }
 
 function cleanOldWeeklyChecks(){
-  // 현재 주 외 weeklyChecks 삭제 (체크 해제 효과)
-  // history의 '주1회확정' 포인트는 유지 (이미 적립된 포인트)
+  // 지난 주 weeklyChecks를 history에 1회 확정 후 삭제 (체크 해제 효과)
   if(!S.weeklyChecks)return;
   var curWk=getWeekKey();
   var changed=false;
   Object.keys(S.weeklyChecks).forEach(function(wk){
-    if(wk===curWk)return;
+    if(wk===curWk)return; // 현재 주는 유지
+    // 지난 주: 체크된 항목을 history에 확정 (포인트 보존)
+    ['ian','logan'].forEach(function(who){
+      if(who==='logan'&&userCount()<2)return;
+      S.tasks.forEach(function(t){
+        if(!t.weekly)return;
+        var wc=S.weeklyChecks[wk][t.id];
+        if(!wc||!wc[who])return;
+        var wLabel='주1회확정 '+wk+'_'+t.id;
+        var already=S.history.some(function(h){return h.who===who&&h.name===wLabel;});
+        if(!already){
+          var bonus=(wc[who+'_bonus']&&t.bonusPts)?t.bonusPts:0;
+          S.history.unshift({who:who,pts:t.pts+bonus,name:wLabel,type:'confirm',time:wk+' 확정'});
+        }
+      });
+    });
     delete S.weeklyChecks[wk];
     changed=true;
   });
@@ -3923,22 +3967,7 @@ function autoConfirmToday(){
     var hasLogan=S.history.some(function(h){return h.who==='logan'&&h.type==='confirm'&&h.name.indexOf(todayKey)>-1;});
     if(ianPts>0&&!hasIan){S.history.unshift({who:'ian',pts:ianPts,name:'확정 '+todayKey,type:'confirm',time:ts});}
     if(loganPts>0&&!hasLogan){S.history.unshift({who:'logan',pts:loganPts,name:'확정 '+todayKey,type:'confirm',time:ts});}
-    // 주1회 항목 자동 확정
-    var _wkNow=getWeekKey(y);
-    ['ian','logan'].forEach(function(who2){
-      if(who2==='logan'&&userCount()<2)return;
-      if(!S.weeklyChecks||!S.weeklyChecks[_wkNow])return;
-      S.tasks.forEach(function(t){
-        if(!t.weekly)return;
-        if(!(S.weeklyChecks[_wkNow][t.id]&&S.weeklyChecks[_wkNow][t.id][who2]))return;
-        var wLabel='주1회확정 '+_wkNow+'_'+t.id;
-        var already=S.history.some(function(h){return h.who===who2&&h.name===wLabel;});
-        if(!already){
-          var _bonusA=(S.weeklyChecks&&S.weeklyChecks[_wkNow]&&S.weeklyChecks[_wkNow][t.id]&&S.weeklyChecks[_wkNow][t.id][who2+'_bonus']&&t.bonusPts)?t.bonusPts:0;
-          S.history.unshift({who:who2,pts:t.pts+_bonusA,name:wLabel,type:'confirm',time:ts});
-        }
-      });
-    });
+    // 주1회는 매일 확정하지 않음 (주 종료 시 cleanOldWeeklyChecks에서 1회 확정)
     if(!d.confirmed){
       d.confirmed=true;
       if(!d.snap){
