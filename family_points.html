@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v1.2.5 | Family Points App | Release 2026-05-30 -->
+<!-- 가족포인트앱 v1.2.6 | Family Points App | Release 2026-05-30 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -1013,7 +1013,7 @@ function ucLight(who){
 }
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='1.2.5';
+var APP_VERSION='1.2.6';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1rHjta_5QdDjB9TT8IBDg4QcrjOuUhstmMmnHWr6EyP8'; // 운영 시트 (sheetId 없을 때 기본값)
 function getDefaultSheetId(){
@@ -1551,16 +1551,20 @@ function isChecked(who, tid, dateObj, opts){
   var ds=dStr(dObj);
   var t=null;for(var i=0;i<S.tasks.length;i++){if(S.tasks[i].id===tid){t=S.tasks[i];break;}}
   if(!t)return false;
-  // 주1회: 항상 weeklyChecks[주키] 기준
+  // 주1회: weeklyChecks[주키] 우선, 없으면 history의 주1회확정 확인
   if(t.weekly){
+    var wk=wkKeyOf(dObj);
     if(opts.mod){
-      // 수정모드: snap.modIan 우선 (enterEditMode에서 weeklyChecks→mod 복사됨)
+      // 수정모드: snap.modIan 우선 (enterEditMode에서 복사됨)
       var dm=S.dayData[ds];
       var mod=dm&&dm.snap?(who==='ian'?dm.snap.modIan:dm.snap.modLogan):null;
       if(mod)return !!mod[tid];
     }
-    var wk=wkKeyOf(dObj);
-    return !!(S.weeklyChecks&&S.weeklyChecks[wk]&&S.weeklyChecks[wk][tid]&&S.weeklyChecks[wk][tid][who]);
+    // 1) weeklyChecks (현재 주 또는 아직 정리 안 된 주)
+    if(S.weeklyChecks&&S.weeklyChecks[wk]&&S.weeklyChecks[wk][tid]&&S.weeklyChecks[wk][tid][who])return true;
+    // 2) 지난 주 정리됨 → history의 주1회확정 확인 (체크 표시 유지)
+    var wLabel='주1회확정 '+wk+'_'+tid;
+    return S.history.some(function(h){return h.who===who&&h.name===wLabel;});
   }
   // 일반 항목
   var d=S.dayData[ds];
