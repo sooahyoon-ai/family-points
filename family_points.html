@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v1.2.8 | Family Points App | Release 2026-05-30 -->
+<!-- 가족포인트앱 v1.2.9 | Family Points App | Release 2026-05-30 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -664,7 +664,7 @@ input:checked+.toggle-sl:before{transform:translateX(18px);}
           </div>
         </div>
         <button id="force-load-btn" onclick="forceLoadFromServer()" style="display:none;margin-top:10px;width:100%;padding:10px;border-radius:9px;border:1px solid #8E44AD;background:#F5EEF8;color:#6C3483;font-size:13px;font-weight:700;cursor:pointer;-webkit-appearance:none">☁️ 서버에서 강제 불러오기</button>
-        <button id="debug-btn" onclick="showDebugInfo()" style="display:none;margin-top:6px;width:100%;padding:8px;border-radius:9px;border:1px solid #aaa;background:#f5f5f3;color:#555;font-size:11px;cursor:pointer;-webkit-appearance:none">🔍 디버그 정보 보기</button>
+        <button id="debug-btn" onclick="showDebugInfo()" style="margin-top:6px;width:100%;padding:8px;border-radius:9px;border:1px solid #aaa;background:#f5f5f3;color:#555;font-size:11px;cursor:pointer;-webkit-appearance:none">🔍 동기화 진단</button>
       </div>
       <div class="opt-sec">
         <div class="opt-title">데이터</div>
@@ -1008,7 +1008,7 @@ function uc2(){return (S.opts&&S.opts.color2)||'#9A5C00';}
 function uc(who){return who==='ian'?uc1():uc2();}
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='1.2.8';
+var APP_VERSION='1.2.9';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1rHjta_5QdDjB9TT8IBDg4QcrjOuUhstmMmnHWr6EyP8'; // 운영 시트 (sheetId 없을 때 기본값)
 function getDefaultSheetId(){
@@ -3646,14 +3646,64 @@ function clearSheetId(){
   });
 }
 function showDebugInfo(){
-  var sid=(document.getElementById('opt-sheet-id')?document.getElementById('opt-sheet-id').value.trim():'')||S.opts.sheetId||'없음';
+  var sid=S.opts.sheetId||getDefaultSheetId();
   var gasUrl=getGasUrl();
-  var msg='GAS: '+gasUrl.substring(0,40)+'...\n시트ID: '+sid.substring(0,20)+'\nTS: '+S.lastModified;
-  toast(msg);
-  console.log('GAS URL:',gasUrl);
-  console.log('sheetId:',sid);
-  console.log('S.opts.sheetId:',S.opts.sheetId);
-  console.log('lastModified:',S.lastModified);
+  var usingCustomUrl=!!(S.opts&&S.opts.gasUrl&&S.opts.gasUrl.trim());
+  var usingCustomSheet=!!(S.opts&&S.opts.sheetId&&S.opts.sheetId.trim());
+  var lm=S.lastModified?new Date(S.lastModified).toLocaleString('ko-KR'):'없음';
+  var hist=(S.history&&S.history.length)||0;
+  // 서버 핑 테스트
+  setSyncStatus('syncing');
+  var cbName='_pingCb'+Date.now();
+  var sc=document.createElement('script');
+  var done=false;
+  var timer=setTimeout(function(){
+    if(done)return;done=true;delete window[cbName];if(sc.parentNode)sc.parentNode.removeChild(sc);
+    finishPing('❌ 서버 응답 없음 (timeout)\n→ GAS 재배포 또는 URL 확인 필요',null);
+  },TIMEOUT_JSONP);
+  window[cbName]=function(raw){
+    if(done)return;done=true;clearTimeout(timer);delete window[cbName];if(sc.parentNode)sc.parentNode.removeChild(sc);
+    var serverTS='?',serverHist='?';
+    try{
+      var text=typeof raw==='string'?raw:JSON.stringify(raw);
+      if(text&&text!=='null'&&text!=='""'){
+        var r=JSON.parse(text);
+        serverTS=r.lastModified?new Date(r.lastModified).toLocaleString('ko-KR'):'없음';
+        serverHist=(r.history&&r.history.length)||0;
+      }else{serverTS='서버 데이터 없음';serverHist=0;}
+    }catch(e){serverTS='파싱 실패';}
+    finishPing('✅ 서버 응답 정상',{ts:serverTS,hist:serverHist});
+  };
+  sc.onerror=function(){
+    if(done)return;done=true;clearTimeout(timer);delete window[cbName];if(sc.parentNode)sc.parentNode.removeChild(sc);
+    finishPing('❌ 서버 연결 실패 (네트워크/URL 오류)',null);
+  };
+  sc.src=gasUrl+'?callback='+cbName+'&t='+Date.now()+'&sheetId='+encodeURIComponent(sid);
+  document.head.appendChild(sc);
+
+  function finishPing(status,server){
+    setSyncStatus(isOnline?'online':'offline');
+    var lines=[];
+    lines.push('【 동기화 진단 】');
+    lines.push('');
+    lines.push('서버 연결: '+status);
+    if(server){
+      lines.push('서버 최종수정: '+server.ts);
+      lines.push('서버 기록수: '+server.hist+'개');
+    }
+    lines.push('');
+    lines.push('이 기기 최종수정: '+lm);
+    lines.push('이 기기 기록수: '+hist+'개');
+    lines.push('');
+    lines.push('GAS URL: '+(usingCustomUrl?'사용자설정':'기본값'));
+    lines.push(gasUrl.substring(0,55)+'…');
+    lines.push('시트ID: '+(usingCustomSheet?'사용자설정':'기본값'));
+    lines.push(sid.substring(0,30)+'…');
+    lines.push('');
+    lines.push('▶ 다른 기기와 비교하세요:');
+    lines.push('  GAS URL과 시트ID가 같아야 동기화됩니다.');
+    alert(lines.join('\n'));
+  }
 }
 function forceLoadFromServer(){
   if(!isAdmin()){toast('관리자 모드에서만 사용할 수 있어요.');return;}
