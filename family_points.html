@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v1.2.9 | Family Points App | Release 2026-05-30 -->
+<!-- 가족포인트앱 v1.3.1 | Family Points App | Release 2026-05-30 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -1008,7 +1008,7 @@ function uc2(){return (S.opts&&S.opts.color2)||'#9A5C00';}
 function uc(who){return who==='ian'?uc1():uc2();}
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='1.2.9';
+var APP_VERSION='1.3.1';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1rHjta_5QdDjB9TT8IBDg4QcrjOuUhstmMmnHWr6EyP8'; // 운영 시트 (sheetId 없을 때 기본값)
 function getDefaultSheetId(){
@@ -1232,10 +1232,13 @@ function syncSave(){
     var uploadJSON=JSON.stringify(uploadData);
     if(uploadJSON===lastSyncedJSON){return;}
     setSyncStatus('syncing');
-    fetch(getGasUrl()+'?sheetId='+encodeURIComponent(S.opts.sheetId||getDefaultSheetId()),{
+    var saveUrl=getGasUrl()+'?sheetId='+encodeURIComponent(S.opts.sheetId||getDefaultSheetId());
+    // 1차: 일반 POST (응답 읽기 가능, redirect 따라감)
+    fetch(saveUrl,{
       method:'POST',
       body:uploadJSON,
-      headers:{'Content-Type':'text/plain'}
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      redirect:'follow'
     })
     .then(function(r){return r.text();})
     .then(function(resp){
@@ -1243,16 +1246,30 @@ function syncSave(){
       setSyncStatus('saved');
     })
     .catch(function(err){
-      console.error('[Sync] save 실패:', err&&err.message?err.message:'network error');
-      setSyncStatus('error');
-      // 재시도 1회만 (5초 후)
-      if(!syncSave._retrying){
-        syncSave._retrying=true;
-        setTimeout(function(){
-          syncSave._retrying=false;
-          if(navigator.onLine)syncSave();
-        },5000);
-      }
+      console.error('[Sync] POST 실패, no-cors 폴백 시도:', err&&err.message?err.message:'network error');
+      // 2차 폴백: no-cors POST (응답은 못 읽지만 서버 저장은 됨 - Safari/iPad CORS 우회)
+      fetch(saveUrl,{
+        method:'POST',
+        body:uploadJSON,
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        mode:'no-cors'
+      })
+      .then(function(){
+        // no-cors는 응답을 못 읽으므로 저장 성공으로 간주
+        lastSyncedJSON=uploadJSON;
+        setSyncStatus('saved');
+      })
+      .catch(function(err2){
+        console.error('[Sync] no-cors도 실패:', err2&&err2.message?err2.message:'network error');
+        setSyncStatus('error');
+        if(!syncSave._retrying){
+          syncSave._retrying=true;
+          setTimeout(function(){
+            syncSave._retrying=false;
+            if(navigator.onLine)syncSave();
+          },5000);
+        }
+      });
     });
   },1500);
 }
@@ -3645,6 +3662,32 @@ function clearSheetId(){
     toast('지웠어요. 저장 버튼을 눌러주세요.');
   });
 }
+function forceSaveTest(){
+  if(!S.history||S.history.length===0){alert('저장할 기록이 없어요.');return;}
+  setSyncStatus('syncing');
+  var url=getGasUrl()+'?sheetId='+encodeURIComponent(S.opts.sheetId||getDefaultSheetId());
+  var uploadData=JSON.parse(JSON.stringify(S));uploadData.opts.admin=false;
+  var body=JSON.stringify(uploadData);
+  fetch(url,{method:'POST',body:body,headers:{'Content-Type':'text/plain;charset=utf-8'},redirect:'follow'})
+    .then(function(r){return r.text();})
+    .then(function(resp){
+      lastSyncedJSON=body;setSyncStatus('saved');
+      alert('✅ 서버 저장 성공\n응답: '+(resp?resp.substring(0,100):'(빈 응답)')+'\n\n이제 다른 기기에서 강제 불러오기 해보세요.');
+    })
+    .catch(function(err){
+      // no-cors 폴백
+      fetch(url,{method:'POST',body:body,headers:{'Content-Type':'text/plain;charset=utf-8'},mode:'no-cors'})
+        .then(function(){
+          lastSyncedJSON=body;setSyncStatus('saved');
+          alert('⚠ no-cors 모드로 저장됨 (응답 확인 불가)\n다른 기기에서 강제 불러오기로 확인하세요.');
+        })
+        .catch(function(e2){
+          setSyncStatus('error');
+          alert('❌ 서버 저장 실패\n'+(e2&&e2.message?e2.message:'네트워크 오류')+'\n\nGAS 재배포 또는 네트워크를 확인하세요.');
+        });
+    });
+}
+
 function showDebugInfo(){
   var sid=S.opts.sheetId||getDefaultSheetId();
   var gasUrl=getGasUrl();
@@ -3702,7 +3745,9 @@ function showDebugInfo(){
     lines.push('');
     lines.push('▶ 다른 기기와 비교하세요:');
     lines.push('  GAS URL과 시트ID가 같아야 동기화됩니다.');
-    alert(lines.join('\n'));
+    lines.push('');
+    lines.push('[확인]을 누르면 서버 저장을 테스트합니다.');
+    if(confirm(lines.join('\n'))){forceSaveTest();}
   }
 }
 function forceLoadFromServer(){
