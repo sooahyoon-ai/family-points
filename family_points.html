@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v1.3.6 | Family Points App | Release 2026-05-30 -->
+<!-- 가족포인트앱 v1.3.8 | Family Points App | Release 2026-05-30 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -967,6 +967,21 @@ input:checked+.toggle-sl:before{transform:translateX(18px);}
 </div>
 
 <script>
+// 전역 에러 핸들러: 초기화/런타임 에러를 화면에 표시 (디버그)
+window.onerror=function(msg,url,line,col,error){
+  try{
+    var box=document.getElementById('global-error-box');
+    if(!box){
+      box=document.createElement('div');
+      box.id='global-error-box';
+      box.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#C0392B;color:#fff;padding:8px 12px;font-size:11px;z-index:99999;font-family:monospace;white-space:pre-wrap;max-height:40%;overflow:auto';
+      if(document.body)document.body.appendChild(box);
+    }
+    box.textContent='⚠ 오류: '+msg+'\n위치: '+(line||'?')+':'+(col||'?');
+  }catch(e){}
+  return false;
+};
+
 var EMOJIS=['⭐','🌟','🏆','🎯','💪','🧹','🛁','📚','⏰','✏️','🌙','🥄','🧼','💆','📖','📕','🤝','😊','🍚','🎮','🎁','🍦','🏃','🎨','🎵','🌱','🐶','🚀','✝️','📓','📝','🔖','🌅','🙏','📰','🗓️','🏋️','🚶','🧘','🪥','👕','🧺','🍳','🥗','🥛','💊','💉','🩺','🔬','🧪','🖊️','✒️','🖋️','📐','📏','🔭','🌍','🦷','🛏️','🎤','🎹','🥁','🎸','🎺','🧩','🎲','♟️','🏊','🚴','⚽','🏀','🎾','🏸','🤸','🧗','🌿','🌺','🌸','🍀','🦋','🌈','❄️','🔥','💧','🌊','🍎','🥦','🥕','🌽','🍇','🍓','🫐','🥜','🧇','🥞','🧁','🎂','🍰','🫖','☕','🧋'];
 var GROUPS=['🌅 아침','☀️ 낮','🌆 저녁','🌟 하루종일','🌙 취침','➕ 추가'];
 var DEF_TASKS=[
@@ -1008,7 +1023,7 @@ function uc2(){return (S.opts&&S.opts.color2)||'#9A5C00';}
 function uc(who){return who==='ian'?uc1():uc2();}
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='1.3.6';
+var APP_VERSION='1.3.8';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1rHjta_5QdDjB9TT8IBDg4QcrjOuUhstmMmnHWr6EyP8'; // 운영 시트 (sheetId 없을 때 기본값)
 function getDefaultSheetId(){
@@ -1020,6 +1035,9 @@ function getGasUrl(){
   var url=S.opts&&S.opts.gasUrl&&S.opts.gasUrl.trim();
   return url||GAS_URL;
 }
+var syncTimer=null;
+var _checkTimer=null; // 체크 디바운스 타이머
+var _pendingSync=false;
 
 // GAS POST 저장: fetch 우선, 실패 시 hidden form+iframe 폴백 (Safari/iPad CORS 우회)
 // onResult(success, responseTextOrNull) 콜백
@@ -3941,10 +3959,7 @@ var TIMEOUT_JSONP=8000;      // JSONP 응답 대기
 var TIMEOUT_BACKUP=15000;    // 백업 다운로드/복구 대기
 var DELAY_SYNC_DEBOUNCE=5000;// 동기화 디바운스 기본값
 function startPolling(){stopPolling();pollTimer=setInterval(function(){if(!isOnline)return;if(document.hidden)return;checkServerTs();},POLL_INTERVAL);}
-// 화면 복귀 시 즉시 1회 동기화 (백그라운드 동안 놓친 변경 반영)
-document.addEventListener('visibilitychange',function(){
-  if(!document.hidden&&isOnline){checkServerTs();}
-});
+
 function stopPolling(){if(pollTimer){clearInterval(pollTimer);pollTimer=null;}}
 function checkServerTs(){
   var cbName='_tsCb'+Date.now();
@@ -4147,7 +4162,13 @@ S.opts.admin=false;
 if(!S.opts.gasUrl)S.opts.gasUrl='';
 setSyncStatus(isOnline?'syncing':'offline');
 syncLoad(function(){
-  _initApp();
+  try{
+    _initApp();
+  }catch(e){
+    // 초기화 일부 실패해도 최소한 화면은 뜨도록
+    if(window.onerror)window.onerror('초기화 오류: '+(e&&e.message?e.message:e),'',0,0,e);
+    try{refreshDate();renderTasks();}catch(e2){}
+  }
 });
 
 </script>
