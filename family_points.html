@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v1.3.1 | Family Points App | Release 2026-05-30 -->
+<!-- 가족포인트앱 v1.3.4 | Family Points App | Release 2026-05-30 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -1008,7 +1008,7 @@ function uc2(){return (S.opts&&S.opts.color2)||'#9A5C00';}
 function uc(who){return who==='ian'?uc1():uc2();}
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='1.3.1';
+var APP_VERSION='1.3.4';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1rHjta_5QdDjB9TT8IBDg4QcrjOuUhstmMmnHWr6EyP8'; // 운영 시트 (sheetId 없을 때 기본값)
 function getDefaultSheetId(){
@@ -1233,7 +1233,9 @@ function syncSave(){
     if(uploadJSON===lastSyncedJSON){return;}
     setSyncStatus('syncing');
     var saveUrl=getGasUrl()+'?sheetId='+encodeURIComponent(S.opts.sheetId||getDefaultSheetId());
-    // 1차: 일반 POST (응답 읽기 가능, redirect 따라감)
+    // text/plain은 단순요청(simple request)이라 프리플라이트 없이 전송됨.
+    // Apps Script는 e.postData.contents로 본문을 받으므로 그대로 동작.
+    // 응답을 실제로 읽어 'ok' 확인 → 거짓 성공 방지.
     fetch(saveUrl,{
       method:'POST',
       body:uploadJSON,
@@ -1242,34 +1244,23 @@ function syncSave(){
     })
     .then(function(r){return r.text();})
     .then(function(resp){
+      // GAS가 'ok' 또는 JSON 응답을 반환. error 문자열이면 실패 처리.
+      if(resp&&resp.indexOf('error')===0){
+        throw new Error('서버 오류: '+resp.substring(0,80));
+      }
       lastSyncedJSON=uploadJSON;
       setSyncStatus('saved');
     })
     .catch(function(err){
-      console.error('[Sync] POST 실패, no-cors 폴백 시도:', err&&err.message?err.message:'network error');
-      // 2차 폴백: no-cors POST (응답은 못 읽지만 서버 저장은 됨 - Safari/iPad CORS 우회)
-      fetch(saveUrl,{
-        method:'POST',
-        body:uploadJSON,
-        headers:{'Content-Type':'text/plain;charset=utf-8'},
-        mode:'no-cors'
-      })
-      .then(function(){
-        // no-cors는 응답을 못 읽으므로 저장 성공으로 간주
-        lastSyncedJSON=uploadJSON;
-        setSyncStatus('saved');
-      })
-      .catch(function(err2){
-        console.error('[Sync] no-cors도 실패:', err2&&err2.message?err2.message:'network error');
-        setSyncStatus('error');
-        if(!syncSave._retrying){
-          syncSave._retrying=true;
-          setTimeout(function(){
-            syncSave._retrying=false;
-            if(navigator.onLine)syncSave();
-          },5000);
-        }
-      });
+      console.error('[Sync] save 실패:', err&&err.message?err.message:'network error');
+      setSyncStatus('error');
+      if(!syncSave._retrying){
+        syncSave._retrying=true;
+        setTimeout(function(){
+          syncSave._retrying=false;
+          if(navigator.onLine)syncSave();
+        },5000);
+      }
     });
   },1500);
 }
@@ -2620,8 +2611,8 @@ function renderTasks(){
       }
       return '';
     }
-    var base=sn?(who==='ian'?sn.baseIan||{}:sn.baseLogan||{}):{};
-    return base[tid]?(who==='ian'?'ian-conf':'logan-conf'):'';
+    // 과거 확정: 단일 판정 (snap.baseIan 우선, 없으면 d.ian 폴백)
+    return isChecked(who,tid,vDate)?(who==='ian'?'ian-conf':'logan-conf'):'';
   }
   function checkLbl(who,tid){
     var cls=checkCls(who,tid),nm=kn(who);
@@ -3671,20 +3662,17 @@ function forceSaveTest(){
   fetch(url,{method:'POST',body:body,headers:{'Content-Type':'text/plain;charset=utf-8'},redirect:'follow'})
     .then(function(r){return r.text();})
     .then(function(resp){
+      if(resp&&resp.indexOf('error')===0){
+        setSyncStatus('error');
+        alert('❌ 서버가 오류 반환\n'+resp.substring(0,120)+'\n\nGAS 코드/권한을 확인하세요.');
+        return;
+      }
       lastSyncedJSON=body;setSyncStatus('saved');
-      alert('✅ 서버 저장 성공\n응답: '+(resp?resp.substring(0,100):'(빈 응답)')+'\n\n이제 다른 기기에서 강제 불러오기 해보세요.');
+      alert('✅ 서버 저장 성공 (응답 확인됨)\n응답: '+(resp?resp.substring(0,80):'(빈 응답)')+'\n\n이제 다른 기기에서 강제 불러오기 하세요.');
     })
     .catch(function(err){
-      // no-cors 폴백
-      fetch(url,{method:'POST',body:body,headers:{'Content-Type':'text/plain;charset=utf-8'},mode:'no-cors'})
-        .then(function(){
-          lastSyncedJSON=body;setSyncStatus('saved');
-          alert('⚠ no-cors 모드로 저장됨 (응답 확인 불가)\n다른 기기에서 강제 불러오기로 확인하세요.');
-        })
-        .catch(function(e2){
-          setSyncStatus('error');
-          alert('❌ 서버 저장 실패\n'+(e2&&e2.message?e2.message:'네트워크 오류')+'\n\nGAS 재배포 또는 네트워크를 확인하세요.');
-        });
+      setSyncStatus('error');
+      alert('❌ 서버 저장 실패 (응답 못 받음)\n'+(err&&err.message?err.message:'네트워크 오류')+'\n\n원인 후보:\n1) GAS 배포 권한이 \'모든 사용자\'가 아님\n2) GAS가 최신 재배포 안 됨\n3) 네트워크 차단');
     });
 }
 
