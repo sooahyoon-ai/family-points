@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v1.3.8 | Family Points App | Release 2026-05-30 -->
+<!-- 가족포인트앱 v1.4.0 | Family Points App | Release 2026-05-30 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -1023,7 +1023,7 @@ function uc2(){return (S.opts&&S.opts.color2)||'#9A5C00';}
 function uc(who){return who==='ian'?uc1():uc2();}
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='1.3.8';
+var APP_VERSION='1.4.0';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1rHjta_5QdDjB9TT8IBDg4QcrjOuUhstmMmnHWr6EyP8'; // 운영 시트 (sheetId 없을 때 기본값)
 function getDefaultSheetId(){
@@ -1042,12 +1042,12 @@ var _pendingSync=false;
 // GAS POST 저장: fetch 우선, 실패 시 hidden form+iframe 폴백 (Safari/iPad CORS 우회)
 // onResult(success, responseTextOrNull) 콜백
 function postToGas(url, body, onResult){
-  // 단순 fetch POST (text/plain = 단순요청, 프리플라이트 없음, redirect 따라감)
-  // 응답을 실제로 읽어 'error' 시작이면 실패 처리 → 거짓 성공 방지
+  // 1차: fetch로 form-urlencoded 전송 (data= 필드, 단순요청 → CORS 통과)
+  var formBody='data='+encodeURIComponent(body);
   fetch(url,{
     method:'POST',
-    body:body,
-    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:formBody,
+    headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},
     redirect:'follow'
   })
   .then(function(r){return r.text();})
@@ -1055,8 +1055,38 @@ function postToGas(url, body, onResult){
     if(resp&&resp.indexOf('error')===0){ onResult(false,resp); return; }
     onResult(true,resp);
   })
-  .catch(function(err){
-    onResult(false,(err&&err.message)?err.message:'network error');
+  .catch(function(){
+    // 2차 폴백: hidden iframe + form (fetch가 막히는 Safari 환경)
+    try{
+      var ifName='_gf'+Date.now();
+      var iframe=document.createElement('iframe');
+      iframe.name=ifName;iframe.style.display='none';
+      document.body.appendChild(iframe);
+      var form=document.createElement('form');
+      form.method='POST';form.action=url;form.target=ifName;
+      // 기본 enctype(application/x-www-form-urlencoded)로 data 필드 전송
+      var input=document.createElement('input');
+      input.type='hidden';input.name='data';input.value=body;
+      form.appendChild(input);
+      document.body.appendChild(form);
+      var settled=false;
+      iframe.onload=function(){
+        if(settled)return;settled=true;
+        setTimeout(function(){
+          if(form.parentNode)form.parentNode.removeChild(form);
+          if(iframe.parentNode)iframe.parentNode.removeChild(iframe);
+        },100);
+        // iframe은 응답을 못 읽음 → 저장됐다고 가정 (왕복 검증이 별도 확인)
+        onResult(true,'(iframe 폴백)');
+      };
+      form.submit();
+      setTimeout(function(){
+        if(settled)return;settled=true;
+        if(form.parentNode)form.parentNode.removeChild(form);
+        if(iframe.parentNode)iframe.parentNode.removeChild(iframe);
+        onResult(false,'iframe timeout');
+      },TIMEOUT_BACKUP);
+    }catch(e){ onResult(false,(e&&e.message)?e.message:'iframe error'); }
   });
 }
 
@@ -3690,7 +3720,10 @@ function forceSaveTest(){
   postToGas(url,body,function(ok,resp){
     if(!ok){
       setSyncStatus('error');
-      alert('❌ 1단계 실패: 서버 저장 안 됨\n'+(resp||'네트워크/응답 오류')+'\n\n원인 후보:\n1) GAS 배포 권한 \'모든 사용자\' 아님\n2) GAS 최신 재배포 안 됨\n3) 네트워크 차단');
+      var hint=(resp&&resp.indexOf('fetch')>-1)
+        ? '\n\n[Failed to fetch = 요청이 서버에 닿지 못함]\n→ iframe 폴백도 실패한 상황입니다.\n1) GAS를 v5.6으로 최신 재배포했는지\n2) 배포 액세스 \'모든 사용자\'인지\n3) 네트워크(WiFi/차단) 확인'
+        : '\n\n원인 후보:\n1) GAS 배포 권한 \'모든 사용자\' 아님\n2) GAS 최신 재배포 안 됨\n3) 네트워크 차단';
+      alert('❌ 1단계 실패: 서버 저장 안 됨\n'+(resp||'네트워크/응답 오류')+hint);
       return;
     }
     lastSyncedJSON=body;setSyncStatus('saved');
