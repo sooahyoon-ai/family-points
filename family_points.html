@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v1.3.5 | Family Points App | Release 2026-05-30 -->
+<!-- 가족포인트앱 v1.3.6 | Family Points App | Release 2026-05-30 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -1008,7 +1008,7 @@ function uc2(){return (S.opts&&S.opts.color2)||'#9A5C00';}
 function uc(who){return who==='ian'?uc1():uc2();}
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='1.3.5';
+var APP_VERSION='1.3.6';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1rHjta_5QdDjB9TT8IBDg4QcrjOuUhstmMmnHWr6EyP8'; // 운영 시트 (sheetId 없을 때 기본값)
 function getDefaultSheetId(){
@@ -1024,9 +1024,8 @@ function getGasUrl(){
 // GAS POST 저장: fetch 우선, 실패 시 hidden form+iframe 폴백 (Safari/iPad CORS 우회)
 // onResult(success, responseTextOrNull) 콜백
 function postToGas(url, body, onResult){
-  var settled=false;
-  function done(ok,resp){ if(settled)return; settled=true; onResult(ok,resp); }
-  // 1차: fetch
+  // 단순 fetch POST (text/plain = 단순요청, 프리플라이트 없음, redirect 따라감)
+  // 응답을 실제로 읽어 'error' 시작이면 실패 처리 → 거짓 성공 방지
   fetch(url,{
     method:'POST',
     body:body,
@@ -1035,48 +1034,13 @@ function postToGas(url, body, onResult){
   })
   .then(function(r){return r.text();})
   .then(function(resp){
-    if(resp&&resp.indexOf('error')===0){ done(false,resp); return; }
-    done(true,resp);
+    if(resp&&resp.indexOf('error')===0){ onResult(false,resp); return; }
+    onResult(true,resp);
   })
-  .catch(function(){
-    // 2차 폴백: hidden form + iframe (CORS 우회, 응답은 못 읽음)
-    try{
-      var ifName='_gasFrame'+Date.now();
-      var iframe=document.createElement('iframe');
-      iframe.name=ifName;iframe.style.display='none';
-      document.body.appendChild(iframe);
-      var form=document.createElement('form');
-      form.method='POST';form.action=url;form.target=ifName;
-      form.enctype='text/plain'; // 단순요청 enctype
-      var input=document.createElement('input');
-      input.type='hidden';input.name='data';input.value=body;
-      form.appendChild(input);
-      document.body.appendChild(form);
-      var loaded=false;
-      iframe.onload=function(){
-        loaded=true;
-        setTimeout(function(){
-          if(form.parentNode)form.parentNode.removeChild(form);
-          if(iframe.parentNode)iframe.parentNode.removeChild(iframe);
-        },100);
-        // iframe 방식은 응답을 못 읽으므로 성공으로 간주 (단, 별도 검증 필요)
-        done(true,'(iframe 폴백 - 응답 확인 불가)');
-      };
-      form.submit();
-      // iframe onload 안 오면 타임아웃
-      setTimeout(function(){
-        if(!loaded){
-          if(form.parentNode)form.parentNode.removeChild(form);
-          if(iframe.parentNode)iframe.parentNode.removeChild(iframe);
-          done(false,null);
-        }
-      },TIMEOUT_BACKUP);
-    }catch(e){ done(false,null); }
+  .catch(function(err){
+    onResult(false,(err&&err.message)?err.message:'network error');
   });
 }
-var syncTimer=null;
-var _checkTimer=null; // 체크 디바운스 타이머
-var _pendingSync=false;
 
 function debouncedSyncSave(delay){
   // delay ms 내 추가 액션 없으면 syncSave 실행
