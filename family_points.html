@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v1.4.5 | Family Points App | Release 2026-05-30 -->
+<!-- 가족포인트앱 v1.4.6 | Family Points App | Release 2026-05-30 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -1027,7 +1027,7 @@ function uc2(){return (S.opts&&S.opts.color2)||'#9A5C00';}
 function uc(who){return who==='ian'?uc1():uc2();}
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='1.4.5';
+var APP_VERSION='1.4.6';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1rHjta_5QdDjB9TT8IBDg4QcrjOuUhstmMmnHWr6EyP8'; // 운영 시트 (sheetId 없을 때 기본값)
 function getDefaultSheetId(){
@@ -1046,53 +1046,62 @@ var _pendingSync=false;
 // GAS POST 저장: fetch 우선, 실패 시 hidden form+iframe 폴백 (Safari/iPad CORS 우회)
 // onResult(success, responseTextOrNull) 콜백
 function postToGas(url, body, onResult){
-  // github.io→Apps Script는 POST가 CORS로 막힘. 읽기처럼 GET(JSONP)으로 저장한다.
-  // 데이터를 LZString으로 압축(약 1/4~1/10)하여 URL 길이 한도 안에 담는다.
-  window._lastPostLog='압축 GET 저장 시작';
+  // 압축 후 조각내어 GET(JSONP)으로 전송. GAS가 조각을 모아 합친 뒤 시트에 저장.
+  // (github.io→Apps Script POST가 CORS로 막히므로 GET 사용, 큰 데이터는 조각 분할)
+  window._lastPostLog='압축 시작';
   var compressed;
-  try{
-    compressed=LZString.compressToEncodedURIComponent(body);
-  }catch(e){
-    window._lastPostLog='압축 실패:'+e;
-    onResult(false,'압축 실패');return;
-  }
+  try{ compressed=LZString.compressToEncodedURIComponent(body); }
+  catch(e){ window._lastPostLog='압축 실패:'+e; onResult(false,'압축 실패'); return; }
+
   var base=getGasUrl();
   var sid=S.opts.sheetId||getDefaultSheetId();
-  // GET URL 길이 점검 (안전 한도 8000자)
-  var fullLen=base.length+sid.length+compressed.length+80;
-  window._lastPostLog='압축크기:'+compressed.length+' URL총길이:'+fullLen;
-  if(fullLen>8000){
-    onResult(false,'데이터가 너무 큼('+fullLen+'자). 오래된 기록 정리 필요');return;
+  var CHUNK=6000;
+  var chunks=[];
+  for(var p=0;p<compressed.length;p+=CHUNK) chunks.push(compressed.substring(p,p+CHUNK));
+  var total=chunks.length;
+  var sessId='s'+Date.now()+Math.floor(Math.random()*10000);
+  window._lastPostLog='압축'+compressed.length+'자, '+total+'조각 전송 시작';
+
+  // 조각을 순서대로 전송 (JSONP)
+  function sendChunk(i){
+    var cbName='_zc'+Date.now()+i+Math.floor(Math.random()*1000);
+    var sc=document.createElement('script');
+    var done=false;
+    var timer=setTimeout(function(){
+      if(done)return;done=true;delete window[cbName];
+      if(sc.parentNode)sc.parentNode.removeChild(sc);
+      window._lastPostLog='조각'+i+'/'+total+' timeout';
+      onResult(false,'조각 '+(i+1)+' 전송 timeout');
+    },TIMEOUT_BACKUP);
+    window[cbName]=function(res){
+      if(done)return;done=true;clearTimeout(timer);delete window[cbName];
+      if(sc.parentNode)sc.parentNode.removeChild(sc);
+      if(!res||!res.ok){
+        window._lastPostLog='조각'+i+' 실패:'+((res&&res.error)||'?');
+        onResult(false,(res&&res.error)||('조각 '+(i+1)+' 실패'));
+        return;
+      }
+      if(i+1<total){
+        sendChunk(i+1); // 다음 조각
+      }else{
+        window._lastPostLog='전체 '+total+'조각 저장 완료';
+        onResult(true,'저장 성공('+total+'조각)');
+      }
+    };
+    sc.onerror=function(){
+      if(done)return;done=true;clearTimeout(timer);delete window[cbName];
+      if(sc.parentNode)sc.parentNode.removeChild(sc);
+      window._lastPostLog='조각'+i+' 연결실패';
+      onResult(false,'조각 '+(i+1)+' 연결 실패');
+    };
+    var sep=base.indexOf('?')>-1?'&':'?';
+    sc.src=base+sep+'action=saveChunk&callback='+cbName
+      +'&sid='+encodeURIComponent(sid)
+      +'&sess='+sessId+'&idx='+i+'&total='+total
+      +'&cdata='+chunks[i]+'&t='+Date.now();
+    document.head.appendChild(sc);
   }
-  var cbName='_save'+Date.now()+Math.floor(Math.random()*1000);
-  var sc=document.createElement('script');
-  var done=false;
-  var timer=setTimeout(function(){
-    if(done)return;done=true;delete window[cbName];
-    if(sc.parentNode)sc.parentNode.removeChild(sc);
-    window._lastPostLog='저장 GET timeout';
-    onResult(false,'저장 timeout');
-  },TIMEOUT_BACKUP);
-  window[cbName]=function(res){
-    if(done)return;done=true;clearTimeout(timer);delete window[cbName];
-    if(sc.parentNode)sc.parentNode.removeChild(sc);
-    if(res&&res.ok){
-      window._lastPostLog='저장 성공';
-      onResult(true,'저장 성공');
-    }else{
-      window._lastPostLog='저장 실패:'+((res&&res.error)||'?');
-      onResult(false,(res&&res.error)||'GAS 저장 실패');
-    }
-  };
-  sc.onerror=function(){
-    if(done)return;done=true;clearTimeout(timer);delete window[cbName];
-    if(sc.parentNode)sc.parentNode.removeChild(sc);
-    window._lastPostLog='저장 GET 연결 실패';
-    onResult(false,'연결 실패');
-  };
-  var sep=base.indexOf('?')>-1?'&':'?';
-  sc.src=base+sep+'action=saveZip&callback='+cbName+'&sheetId='+encodeURIComponent(sid)+'&cdata='+compressed+'&t='+Date.now();
-  document.head.appendChild(sc);
+  sendChunk(0);
 }
 
 function verifyServerSave(saveUrl, marker, onResult){
