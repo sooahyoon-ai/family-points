@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v1.4.0 | Family Points App | Release 2026-05-30 -->
+<!-- 가족포인트앱 v1.4.2 | Family Points App | Release 2026-05-30 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -1023,7 +1023,7 @@ function uc2(){return (S.opts&&S.opts.color2)||'#9A5C00';}
 function uc(who){return who==='ian'?uc1():uc2();}
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='1.4.0';
+var APP_VERSION='1.4.2';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1rHjta_5QdDjB9TT8IBDg4QcrjOuUhstmMmnHWr6EyP8'; // 운영 시트 (sheetId 없을 때 기본값)
 function getDefaultSheetId(){
@@ -1042,12 +1042,11 @@ var _pendingSync=false;
 // GAS POST 저장: fetch 우선, 실패 시 hidden form+iframe 폴백 (Safari/iPad CORS 우회)
 // onResult(success, responseTextOrNull) 콜백
 function postToGas(url, body, onResult){
-  // 1차: fetch로 form-urlencoded 전송 (data= 필드, 단순요청 → CORS 통과)
-  var formBody='data='+encodeURIComponent(body);
+  // fetch POST (text/plain = 단순요청, 프리플라이트 없음). 응답을 읽어 ok 확인.
   fetch(url,{
     method:'POST',
-    body:formBody,
-    headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},
+    body:body,
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
     redirect:'follow'
   })
   .then(function(r){return r.text();})
@@ -1055,38 +1054,8 @@ function postToGas(url, body, onResult){
     if(resp&&resp.indexOf('error')===0){ onResult(false,resp); return; }
     onResult(true,resp);
   })
-  .catch(function(){
-    // 2차 폴백: hidden iframe + form (fetch가 막히는 Safari 환경)
-    try{
-      var ifName='_gf'+Date.now();
-      var iframe=document.createElement('iframe');
-      iframe.name=ifName;iframe.style.display='none';
-      document.body.appendChild(iframe);
-      var form=document.createElement('form');
-      form.method='POST';form.action=url;form.target=ifName;
-      // 기본 enctype(application/x-www-form-urlencoded)로 data 필드 전송
-      var input=document.createElement('input');
-      input.type='hidden';input.name='data';input.value=body;
-      form.appendChild(input);
-      document.body.appendChild(form);
-      var settled=false;
-      iframe.onload=function(){
-        if(settled)return;settled=true;
-        setTimeout(function(){
-          if(form.parentNode)form.parentNode.removeChild(form);
-          if(iframe.parentNode)iframe.parentNode.removeChild(iframe);
-        },100);
-        // iframe은 응답을 못 읽음 → 저장됐다고 가정 (왕복 검증이 별도 확인)
-        onResult(true,'(iframe 폴백)');
-      };
-      form.submit();
-      setTimeout(function(){
-        if(settled)return;settled=true;
-        if(form.parentNode)form.parentNode.removeChild(form);
-        if(iframe.parentNode)iframe.parentNode.removeChild(iframe);
-        onResult(false,'iframe timeout');
-      },TIMEOUT_BACKUP);
-    }catch(e){ onResult(false,(e&&e.message)?e.message:'iframe error'); }
+  .catch(function(err){
+    onResult(false,(err&&err.message)?err.message:'Failed to fetch');
   });
 }
 
