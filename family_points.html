@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v1.4.2 | Family Points App | Release 2026-05-30 -->
+<!-- 가족포인트앱 v1.4.3 | Family Points App | Release 2026-05-30 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -1023,7 +1023,7 @@ function uc2(){return (S.opts&&S.opts.color2)||'#9A5C00';}
 function uc(who){return who==='ian'?uc1():uc2();}
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='1.4.2';
+var APP_VERSION='1.4.3';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1rHjta_5QdDjB9TT8IBDg4QcrjOuUhstmMmnHWr6EyP8'; // 운영 시트 (sheetId 없을 때 기본값)
 function getDefaultSheetId(){
@@ -1042,19 +1042,24 @@ var _pendingSync=false;
 // GAS POST 저장: fetch 우선, 실패 시 hidden form+iframe 폴백 (Safari/iPad CORS 우회)
 // onResult(success, responseTextOrNull) 콜백
 function postToGas(url, body, onResult){
-  // fetch POST (text/plain = 단순요청, 프리플라이트 없음). 응답을 읽어 ok 확인.
+  window._lastPostLog='fetch 시작 (url 길이:'+url.length+', body 길이:'+body.length+')';
   fetch(url,{
     method:'POST',
     body:body,
     headers:{'Content-Type':'text/plain;charset=utf-8'},
     redirect:'follow'
   })
-  .then(function(r){return r.text();})
+  .then(function(r){
+    window._lastPostLog='응답 받음 status:'+r.status;
+    return r.text();
+  })
   .then(function(resp){
+    window._lastPostLog='응답 본문:'+(resp?resp.substring(0,50):'(빈값)');
     if(resp&&resp.indexOf('error')===0){ onResult(false,resp); return; }
     onResult(true,resp);
   })
   .catch(function(err){
+    window._lastPostLog='catch 에러:'+((err&&err.message)?err.message:String(err));
     onResult(false,(err&&err.message)?err.message:'Failed to fetch');
   });
 }
@@ -3689,9 +3694,11 @@ function forceSaveTest(){
   postToGas(url,body,function(ok,resp){
     if(!ok){
       setSyncStatus('error');
-      var hint=(resp&&resp.indexOf('fetch')>-1)
-        ? '\n\n[Failed to fetch = 요청이 서버에 닿지 못함]\n→ iframe 폴백도 실패한 상황입니다.\n1) GAS를 v5.6으로 최신 재배포했는지\n2) 배포 액세스 \'모든 사용자\'인지\n3) 네트워크(WiFi/차단) 확인'
-        : '\n\n원인 후보:\n1) GAS 배포 권한 \'모든 사용자\' 아님\n2) GAS 최신 재배포 안 됨\n3) 네트워크 차단';
+      var plog=window._lastPostLog||'(로그 없음)';
+      var hint='\n\n[상세] '+plog+
+(resp&&resp.indexOf('fetch')>-1)
+        ? '\n\n[Failed to fetch = fetch 요청이 거부됨]\n현재 앱 버전: '+APP_VERSION+'\n→ 이 기기가 최신(v1.4.2 이상)인지 먼저 확인하세요.\n  (캐시 때문에 옛 코드가 돌 수 있음)\n→ 최신인데도 실패하면 네트워크/방화벽 확인'
+        : '\n\n응답: '+(resp||'')+'\n현재 앱 버전: '+APP_VERSION;
       alert('❌ 1단계 실패: 서버 저장 안 됨\n'+(resp||'네트워크/응답 오류')+hint);
       return;
     }
