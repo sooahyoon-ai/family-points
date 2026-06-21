@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v1.4.3 | Family Points App | Release 2026-05-30 -->
+<!-- 가족포인트앱 v1.4.4 | Family Points App | Release 2026-05-30 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -1023,7 +1023,7 @@ function uc2(){return (S.opts&&S.opts.color2)||'#9A5C00';}
 function uc(who){return who==='ian'?uc1():uc2();}
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='1.4.3';
+var APP_VERSION='1.4.4';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1rHjta_5QdDjB9TT8IBDg4QcrjOuUhstmMmnHWr6EyP8'; // 운영 시트 (sheetId 없을 때 기본값)
 function getDefaultSheetId(){
@@ -1042,26 +1042,65 @@ var _pendingSync=false;
 // GAS POST 저장: fetch 우선, 실패 시 hidden form+iframe 폴백 (Safari/iPad CORS 우회)
 // onResult(success, responseTextOrNull) 콜백
 function postToGas(url, body, onResult){
-  window._lastPostLog='fetch 시작 (url 길이:'+url.length+', body 길이:'+body.length+')';
+  // github.io → Apps Script는 cross-origin. 일반 fetch는 CORS로 응답이 막혀 'Failed to fetch'.
+  // no-cors 모드로 보내면 요청은 서버에 도달(저장됨), 단 응답은 읽을 수 없음(opaque).
+  // 따라서 보낸 뒤 GET(JSONP)으로 서버를 다시 읽어 실제 반영을 확인한다.
+  window._lastPostLog='no-cors POST 전송 (body 길이:'+body.length+')';
+  var marker=null;
+  try{ marker=JSON.parse(body).lastModified||null; }catch(e){}
   fetch(url,{
     method:'POST',
     body:body,
     headers:{'Content-Type':'text/plain;charset=utf-8'},
+    mode:'no-cors',
     redirect:'follow'
   })
-  .then(function(r){
-    window._lastPostLog='응답 받음 status:'+r.status;
-    return r.text();
-  })
-  .then(function(resp){
-    window._lastPostLog='응답 본문:'+(resp?resp.substring(0,50):'(빈값)');
-    if(resp&&resp.indexOf('error')===0){ onResult(false,resp); return; }
-    onResult(true,resp);
+  .then(function(){
+    window._lastPostLog='no-cors 전송 완료, 서버 재확인 중...';
+    // 저장 반영까지 약간 대기 후 GET으로 검증
+    setTimeout(function(){ verifyServerSave(url, marker, onResult); }, 1500);
   })
   .catch(function(err){
-    window._lastPostLog='catch 에러:'+((err&&err.message)?err.message:String(err));
-    onResult(false,(err&&err.message)?err.message:'Failed to fetch');
+    window._lastPostLog='no-cors catch:'+((err&&err.message)?err.message:String(err));
+    onResult(false,(err&&err.message)?err.message:'전송 실패');
   });
+}
+
+// 저장 후 서버를 GET(JSONP)으로 읽어 marker(lastModified) 반영 여부 확인
+function verifyServerSave(saveUrl, marker, onResult){
+  var base=getGasUrl();
+  var sid=S.opts.sheetId||getDefaultSheetId();
+  var cbName='_vfy'+Date.now()+Math.floor(Math.random()*1000);
+  var sc=document.createElement('script');
+  var done=false;
+  var timer=setTimeout(function(){
+    if(done)return;done=true;delete window[cbName];
+    if(sc.parentNode)sc.parentNode.removeChild(sc);
+    // 검증 읽기 실패해도 전송은 됐으므로 일단 성공 처리(거짓음성 방지)
+    onResult(true,'전송됨(검증 timeout)');
+  },TIMEOUT_JSONP);
+  window[cbName]=function(raw){
+    if(done)return;done=true;clearTimeout(timer);delete window[cbName];
+    if(sc.parentNode)sc.parentNode.removeChild(sc);
+    try{
+      var text=typeof raw==='string'?raw:JSON.stringify(raw);
+      var r=JSON.parse(text);
+      var serverTS=r.lastModified||0;
+      if(marker&&serverTS===marker){
+        onResult(true,'저장 확인됨(서버 반영)');
+      }else if(!marker){
+        onResult(true,'전송됨');
+      }else{
+        onResult(false,'서버 미반영 (보낸:'+marker+' 서버:'+serverTS+')');
+      }
+    }catch(e){ onResult(true,'전송됨(검증 파싱실패)'); }
+  };
+  sc.onerror=function(){
+    if(done)return;done=true;clearTimeout(timer);delete window[cbName];
+    onResult(true,'전송됨(검증 연결실패)');
+  };
+  sc.src=base+'?callback='+cbName+'&t='+Date.now()+'&sheetId='+encodeURIComponent(sid);
+  document.head.appendChild(sc);
 }
 
 function debouncedSyncSave(delay){
