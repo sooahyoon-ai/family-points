@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v1.4.8 | Family Points App | Release 2026-05-30 -->
+<!-- 가족포인트앱 v1.5.0 | Family Points App | Release 2026-05-30 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -1027,7 +1027,7 @@ function uc2(){return (S.opts&&S.opts.color2)||'#9A5C00';}
 function uc(who){return who==='ian'?uc1():uc2();}
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='1.4.8';
+var APP_VERSION='1.5.0';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1rHjta_5QdDjB9TT8IBDg4QcrjOuUhstmMmnHWr6EyP8'; // 운영 시트 (sheetId 없을 때 기본값)
 function getDefaultSheetId(){
@@ -1046,45 +1046,25 @@ var _pendingSync=false;
 // GAS POST 저장: fetch 우선, 실패 시 hidden form+iframe 폴백 (Safari/iPad CORS 우회)
 // onResult(success, responseTextOrNull) 콜백
 function postToGas(url, body, onResult){
-  // 압축 후 saveData로 한 번에 GET 전송 (GAS saveData가 LZString 해제하여 저장).
-  // github.io→Apps Script POST는 CORS로 막히므로 GET(JSONP) 사용.
-  window._lastPostLog='압축 시작';
-  var compressed;
-  try{ compressed=LZString.compressToEncodedURIComponent(body); }
-  catch(e){ window._lastPostLog='압축 실패:'+e; onResult(false,'압축 실패'); return; }
-
-  var base=getGasUrl();
-  var sid=S.opts.sheetId||getDefaultSheetId();
-  var fullLen=base.length+sid.length+compressed.length+80;
-  window._lastPostLog='압축'+compressed.length+'자, URL'+fullLen+'자';
-  if(fullLen>8000){
-    onResult(false,'데이터가 큼('+fullLen+'자, 압축'+compressed.length+'). 오래된 내역 정리 필요');
-    return;
-  }
-  var cbName='_sv'+Date.now()+Math.floor(Math.random()*1000);
-  var sc=document.createElement('script');
-  var done=false;
-  var timer=setTimeout(function(){
-    if(done)return;done=true;delete window[cbName];
-    if(sc.parentNode)sc.parentNode.removeChild(sc);
-    window._lastPostLog='저장 timeout';
-    onResult(false,'저장 timeout');
-  },TIMEOUT_BACKUP);
-  window[cbName]=function(res){
-    if(done)return;done=true;clearTimeout(timer);delete window[cbName];
-    if(sc.parentNode)sc.parentNode.removeChild(sc);
-    if(res&&res.ok){ window._lastPostLog='저장 성공'; onResult(true,'저장 성공'); }
-    else { window._lastPostLog='저장 실패:'+((res&&res.error)||'?'); onResult(false,(res&&res.error)||'GAS 저장 실패'); }
-  };
-  sc.onerror=function(){
-    if(done)return;done=true;clearTimeout(timer);delete window[cbName];
-    if(sc.parentNode)sc.parentNode.removeChild(sc);
-    window._lastPostLog='저장 연결 실패';
-    onResult(false,'연결 실패(GAS에 saveZip 없음? 재배포 필요)');
-  };
-  var sep=base.indexOf('?')>-1?'&':'?';
-  sc.src=base+sep+'action=saveZip&callback='+cbName+'&sheetId='+encodeURIComponent(sid)+'&cdata='+compressed+'&t='+Date.now();
-  document.head.appendChild(sc);
+  // 6/4 검증된 단순 구조: fetch POST로 본문(JSON)을 그대로 전송.
+  // GAS doPost가 postData.contents로 받아 시트에 저장. 응답 'ok' 확인.
+  window._lastPostLog='fetch POST 시작 (body '+body.length+'자)';
+  fetch(url,{
+    method:'POST',
+    body:body,
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    redirect:'follow'
+  })
+  .then(function(r){ window._lastPostLog='응답 status '+r.status; return r.text(); })
+  .then(function(resp){
+    window._lastPostLog='응답: '+(resp?resp.substring(0,40):'(빈값)');
+    if(resp&&resp.indexOf('error')===0){ onResult(false,resp); return; }
+    onResult(true,resp);
+  })
+  .catch(function(err){
+    window._lastPostLog='catch: '+((err&&err.message)?err.message:String(err));
+    onResult(false,(err&&err.message)?err.message:'Failed to fetch');
+  });
 }
 
 function verifyServerSave(saveUrl, marker, onResult){
