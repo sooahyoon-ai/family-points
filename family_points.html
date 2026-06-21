@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v1.4.6 | Family Points App | Release 2026-05-30 -->
+<!-- 가족포인트앱 v1.4.7 | Family Points App | Release 2026-05-30 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -1027,7 +1027,7 @@ function uc2(){return (S.opts&&S.opts.color2)||'#9A5C00';}
 function uc(who){return who==='ian'?uc1():uc2();}
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='1.4.6';
+var APP_VERSION='1.4.7';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1rHjta_5QdDjB9TT8IBDg4QcrjOuUhstmMmnHWr6EyP8'; // 운영 시트 (sheetId 없을 때 기본값)
 function getDefaultSheetId(){
@@ -1345,6 +1345,18 @@ function syncSave(){
     // 서버 업로드 시 admin=false 마스킹 (관리자 모드는 기기 세션 전용)
     var uploadData=JSON.parse(JSON.stringify(S));
     uploadData.opts.admin=false;
+    // 서버 전송 데이터 축소: 60일 이전 dayData 제외 (점수는 history에 보존되어 총점 무영향)
+    // → URL 길이 한도 안에서 안정적으로 동기화
+    try{
+      var _cut=new Date();_cut.setDate(_cut.getDate()-60);
+      var _keep={};
+      Object.keys(uploadData.dayData||{}).forEach(function(ds){
+        var pp=ds.split('-');
+        var dd=new Date(parseInt(pp[0]),parseInt(pp[1])-1,parseInt(pp[2]));
+        if(dd>=_cut) _keep[ds]=uploadData.dayData[ds];
+      });
+      uploadData.dayData=_keep;
+    }catch(e){}
     var uploadJSON=JSON.stringify(uploadData);
     if(uploadJSON===lastSyncedJSON){return;}
     setSyncStatus('syncing');
