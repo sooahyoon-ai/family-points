@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v1.5.1 | Family Points App | Release 2026-05-30 -->
+<!-- 가족포인트앱 v1.5.2 | Family Points App | Release 2026-05-30 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -1027,7 +1027,7 @@ function uc2(){return (S.opts&&S.opts.color2)||'#9A5C00';}
 function uc(who){return who==='ian'?uc1():uc2();}
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='1.5.1';
+var APP_VERSION='1.5.2';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1rHjta_5QdDjB9TT8IBDg4QcrjOuUhstmMmnHWr6EyP8'; // 운영 시트 (sheetId 없을 때 기본값)
 function getDefaultSheetId(){
@@ -1343,7 +1343,8 @@ function syncSave(){
     var uploadJSON=JSON.stringify(uploadData);
     if(uploadJSON===lastSyncedJSON){return;}
     setSyncStatus('syncing');
-    var saveUrl=getGasUrl()+'?sheetId='+encodeURIComponent(S.opts.sheetId||getDefaultSheetId());
+    // postToGas가 base URL에 파라미터를 직접 붙이므로 깨끗한 URL을 전달
+    var saveUrl=getGasUrl();
     postToGas(saveUrl,uploadJSON,function(ok,resp){
       if(ok){
         lastSyncedJSON=uploadJSON;
@@ -3758,7 +3759,7 @@ function forceSaveTest(){
   var marker=Date.now();
   S.lastModified=marker;
   var sid=S.opts.sheetId||getDefaultSheetId();
-  var url=getGasUrl()+'?sheetId='+encodeURIComponent(sid);
+  var url=getGasUrl(); // postToGas가 파라미터 직접 부착
   var uploadData=JSON.parse(JSON.stringify(S));uploadData.opts.admin=false;
   var body=JSON.stringify(uploadData);
   alert('① 서버에 저장을 시도합니다...');
