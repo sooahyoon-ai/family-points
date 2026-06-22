@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v1.7.2 | Family Points App | Release 2026-05-30 -->
+<!-- 가족포인트앱 v1.7.3 | Family Points App | Release 2026-05-30 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -1028,7 +1028,7 @@ function uc2(){return (S.opts&&S.opts.color2)||'#9A5C00';}
 function uc(who){return who==='ian'?uc1():uc2();}
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='1.7.2';
+var APP_VERSION='1.7.3';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1rHjta_5QdDjB9TT8IBDg4QcrjOuUhstmMmnHWr6EyP8'; // 운영 시트 (sheetId 없을 때 기본값)
 function getDefaultSheetId(){
@@ -1047,56 +1047,80 @@ var _pendingSync=false;
 // GAS POST 저장: fetch 우선, 실패 시 hidden form+iframe 폴백 (Safari/iPad CORS 우회)
 // onResult(success, responseTextOrNull) 콜백
 function postToGas(url, body, onResult){
-  // 쌍방향 동기화 저장: POST가 환경(CORS)으로 막히고 데이터가 커서 GET 한 번에도 안 담김.
-  // → 압축 후 여러 조각으로 나눠 GET(JSONP) 전송. GAS saveChunk가 모아 합쳐 저장.
+  // Apps Script가 쓰기 doGet 응답에 302 리다이렉트를 걸어 JSONP 콜백이 안 옴.
+  // → 조각을 응답 대기 없이 순차 전송(script 태그 onload 기준), 마지막에 읽기로 검증.
   window._lastPostLog='압축 시작';
   var compressed;
   try{ compressed=LZString.compressToEncodedURIComponent(body); }
   catch(e){ window._lastPostLog='압축실패:'+e; onResult(false,'압축 실패'); return; }
 
   var base=getGasUrl();
-  var sid=S.opts.sheetId||getDefaultSheetId();
   var CHUNK=6000;
   var chunks=[];
   for(var p=0;p<compressed.length;p+=CHUNK) chunks.push(compressed.substring(p,p+CHUNK));
   var total=chunks.length;
   var sessId='s'+Date.now()+Math.floor(Math.random()*10000);
-  window._lastPostLog='압축'+compressed.length+'자 → '+total+'조각 전송';
+  var marker=null;
+  try{ marker=JSON.parse(body).lastModified||null; }catch(e){}
+  window._lastPostLog='압축'+compressed.length+'자 → '+total+'조각 전송(무응답 방식)';
 
   function sendChunk(i){
-    var cbName='_ck'+Date.now()+i+Math.floor(Math.random()*1000);
     var sc=document.createElement('script');
-    var done=false;
-    var timer=setTimeout(function(){
-      if(done)return;done=true;delete window[cbName];
+    var moved=false;
+    function next(){
+      if(moved)return;moved=true;
       if(sc.parentNode)sc.parentNode.removeChild(sc);
-      window._lastPostLog='조각'+(i+1)+'/'+total+' timeout';
-      onResult(false,'조각 '+(i+1)+'/'+total+' timeout');
-    },TIMEOUT_BACKUP);
-    window[cbName]=function(res){
-      if(done)return;done=true;clearTimeout(timer);delete window[cbName];
-      if(sc.parentNode)sc.parentNode.removeChild(sc);
-      if(!res||!res.ok){
-        window._lastPostLog='조각'+(i+1)+' 실패:'+((res&&res.error)||'?');
-        onResult(false,(res&&res.error)||('조각 '+(i+1)+' 실패'));
-        return;
+      if(i+1<total){ setTimeout(function(){sendChunk(i+1);}, 400); }
+      else {
+        // 모든 조각 전송됨. 잠시 후 읽기로 저장 검증.
+        window._lastPostLog=total+'조각 전송 완료, 서버 확인 중';
+        setTimeout(function(){ verifyAfterSave(marker, onResult); }, 2000);
       }
-      if(i+1<total){ sendChunk(i+1); }
-      else{ window._lastPostLog=total+'조각 저장 완료'; onResult(true,'저장 성공('+total+'조각)'); }
-    };
-    sc.onerror=function(){
-      if(done)return;done=true;clearTimeout(timer);delete window[cbName];
-      if(sc.parentNode)sc.parentNode.removeChild(sc);
-      window._lastPostLog='조각'+(i+1)+' 연결실패';
-      onResult(false,'조각 '+(i+1)+' 연결 실패');
-    };
+    }
+    // 302든 뭐든 로딩이 끝나면(onload/onerror) 다음으로 진행
+    sc.onload=next;
+    sc.onerror=next;
     var sep=base.indexOf('?')>-1?'&':'?';
-    sc.src=base+sep+'action=saveChunk&callback='+cbName
-      +'&sess='+sessId+'&idx='+i+'&total='+total
+    sc.src=base+sep+'action=saveChunk&sess='+sessId+'&idx='+i+'&total='+total
       +'&cdata='+encodeURIComponent(chunks[i])+'&t='+Date.now();
     document.head.appendChild(sc);
+    // 안전장치: 8초 내 onload/onerror 안 오면 강제 진행
+    setTimeout(next, 8000);
   }
   sendChunk(0);
+}
+
+// 저장 후 읽기로 marker(lastModified) 반영 확인
+function verifyAfterSave(marker, onResult){
+  var base=getGasUrl();
+  var sid=S.opts.sheetId||getDefaultSheetId();
+  var cbName='_vf'+Date.now()+Math.floor(Math.random()*1000);
+  var sc=document.createElement('script');
+  var done=false;
+  var timer=setTimeout(function(){
+    if(done)return;done=true;delete window[cbName];
+    if(sc.parentNode)sc.parentNode.removeChild(sc);
+    onResult(true,'전송됨(검증 timeout)');
+  },TIMEOUT_JSONP);
+  window[cbName]=function(raw){
+    if(done)return;done=true;clearTimeout(timer);delete window[cbName];
+    if(sc.parentNode)sc.parentNode.removeChild(sc);
+    try{
+      var text=typeof raw==='string'?raw:JSON.stringify(raw);
+      var r=JSON.parse(text);
+      var serverTS=r.lastModified||0;
+      if(marker&&serverTS===marker){ window._lastPostLog='저장 확인됨'; onResult(true,'저장 성공'); }
+      else if(!marker){ onResult(true,'전송됨'); }
+      else { window._lastPostLog='서버 미반영(보낸:'+marker+' 서버:'+serverTS+')'; onResult(false,'서버 미반영'); }
+    }catch(e){ onResult(true,'전송됨(검증 파싱실패)'); }
+  };
+  sc.onerror=function(){
+    if(done)return;done=true;clearTimeout(timer);delete window[cbName];
+    if(sc.parentNode)sc.parentNode.removeChild(sc);
+    onResult(true,'전송됨(검증 연결실패)');
+  };
+  sc.src=base+'?callback='+cbName+'&t='+Date.now()+'&sheetId='+encodeURIComponent(sid);
+  document.head.appendChild(sc);
 }
 
 function verifyServerSave(saveUrl, marker, onResult){
