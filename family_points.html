@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v1.5.2 | Family Points App | Release 2026-05-30 -->
+<!-- 가족포인트앱 v1.5.3 | Family Points App | Release 2026-05-30 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -665,6 +665,7 @@ input:checked+.toggle-sl:before{transform:translateX(18px);}
         </div>
         <button id="force-load-btn" onclick="forceLoadFromServer()" style="display:none;margin-top:10px;width:100%;padding:10px;border-radius:9px;border:1px solid #8E44AD;background:#F5EEF8;color:#6C3483;font-size:13px;font-weight:700;cursor:pointer;-webkit-appearance:none">☁️ 서버에서 강제 불러오기</button>
         <button id="debug-btn" onclick="showDebugInfo()" style="margin-top:6px;width:100%;padding:8px;border-radius:9px;border:1px solid #aaa;background:#f5f5f3;color:#555;font-size:11px;cursor:pointer;-webkit-appearance:none">🔍 동기화 진단</button>
+        <button id="analyze-btn" onclick="analyzeDataSize()" style="margin-top:6px;width:100%;padding:8px;border-radius:9px;border:1px solid #aaa;background:#f5f5f3;color:#555;font-size:11px;cursor:pointer;-webkit-appearance:none">📊 데이터 크기 분석</button>
       </div>
       <div class="opt-sec">
         <div class="opt-title">데이터</div>
@@ -1027,7 +1028,7 @@ function uc2(){return (S.opts&&S.opts.color2)||'#9A5C00';}
 function uc(who){return who==='ian'?uc1():uc2();}
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='1.5.2';
+var APP_VERSION='1.5.3';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1rHjta_5QdDjB9TT8IBDg4QcrjOuUhstmMmnHWr6EyP8'; // 운영 시트 (sheetId 없을 때 기본값)
 function getDefaultSheetId(){
@@ -1046,45 +1047,25 @@ var _pendingSync=false;
 // GAS POST 저장: fetch 우선, 실패 시 hidden form+iframe 폴백 (Safari/iPad CORS 우회)
 // onResult(success, responseTextOrNull) 콜백
 function postToGas(url, body, onResult){
-  // POST가 환경(CORS)으로 막히므로, 읽기와 동일한 GET(JSONP)으로 저장한다.
-  // 데이터를 LZString으로 압축하여 URL 한도 안에 담는다. (action=saveZip)
-  window._lastPostLog='압축 시작';
-  var compressed;
-  try{ compressed=LZString.compressToEncodedURIComponent(body); }
-  catch(e){ window._lastPostLog='압축실패:'+e; onResult(false,'압축 실패'); return; }
-
-  var base=getGasUrl();
-  var sid=S.opts.sheetId||getDefaultSheetId();
-  var fullLen=base.length+sid.length+compressed.length+80;
-  window._lastPostLog='압축'+compressed.length+'자, URL'+fullLen+'자';
-  if(fullLen>8000){
-    onResult(false,'데이터가 큼('+fullLen+'자). 오래된 내역 정리 필요');
-    return;
-  }
-  var cbName='_z'+Date.now()+Math.floor(Math.random()*1000);
-  var sc=document.createElement('script');
-  var done=false;
-  var timer=setTimeout(function(){
-    if(done)return;done=true;delete window[cbName];
-    if(sc.parentNode)sc.parentNode.removeChild(sc);
-    window._lastPostLog='저장 timeout';
-    onResult(false,'저장 timeout');
-  },TIMEOUT_BACKUP);
-  window[cbName]=function(res){
-    if(done)return;done=true;clearTimeout(timer);delete window[cbName];
-    if(sc.parentNode)sc.parentNode.removeChild(sc);
-    if(res&&res.ok){ window._lastPostLog='저장 성공'; onResult(true,'저장 성공'); }
-    else { window._lastPostLog='저장 실패:'+((res&&res.error)||'?'); onResult(false,(res&&res.error)||'GAS 저장 실패'); }
-  };
-  sc.onerror=function(){
-    if(done)return;done=true;clearTimeout(timer);delete window[cbName];
-    if(sc.parentNode)sc.parentNode.removeChild(sc);
-    window._lastPostLog='저장 연결실패(saveZip 재배포 확인)';
-    onResult(false,'연결 실패');
-  };
-  var sep=base.indexOf('?')>-1?'&':'?';
-  sc.src=base+sep+'action=saveZip&callback='+cbName+'&sheetId='+encodeURIComponent(sid)+'&cdata='+compressed+'&t='+Date.now();
-  document.head.appendChild(sc);
+  // 5/12~6/1 검증된 방식: 파라미터 없는 깨끗한 URL로 단순 POST.
+  // (최적화 때 URL에 ?sheetId= 를 붙인 것이 POST를 막은 원인이었음.
+  //  sheetId는 본문 opts.sheetId에 이미 있으므로 URL에 붙이지 않는다.)
+  window._lastPostLog='POST 시작 (body '+body.length+'자)';
+  fetch(getGasUrl(),{
+    method:'POST',
+    body:body,
+    headers:{'Content-Type':'text/plain'}
+  })
+  .then(function(r){ window._lastPostLog='status '+r.status; return r.text(); })
+  .then(function(resp){
+    window._lastPostLog='응답: '+(resp?resp.substring(0,40):'(빈값)');
+    if(resp&&resp.indexOf('error')===0){ onResult(false,resp); return; }
+    onResult(true,resp);
+  })
+  .catch(function(err){
+    window._lastPostLog='catch: '+((err&&err.message)?err.message:String(err));
+    onResult(false,(err&&err.message)?err.message:'Failed to fetch');
+  });
 }
 
 function verifyServerSave(saveUrl, marker, onResult){
@@ -3805,6 +3786,31 @@ function forceSaveTest(){
       document.head.appendChild(sc);
     },1500);
   });
+}
+
+function analyzeDataSize(){
+  function sz(o){ try{return JSON.stringify(o).length;}catch(e){return 0;} }
+  var total=sz(S);
+  var parts=[];
+  parts.push(['history('+((S.history&&S.history.length)||0)+'개)', sz(S.history||[])]);
+  parts.push(['dayData('+Object.keys(S.dayData||{}).length+'일)', sz(S.dayData||{})]);
+  parts.push(['weeklyChecks', sz(S.weeklyChecks||{})]);
+  parts.push(['tasks('+((S.tasks&&S.tasks.length)||0)+'개)', sz(S.tasks||[])]);
+  parts.push(['coupons', sz(S.coupons||[])]);
+  parts.push(['couponBox', sz(S.couponBox||[])]);
+  parts.sort(function(a,b){return b[1]-a[1];});
+  var msg='【 데이터 크기 분석 】\n\n전체: '+total.toLocaleString()+'자\n\n';
+  parts.forEach(function(p){
+    var pct=total>0?Math.round(p[1]/total*100):0;
+    msg+=p[0]+': '+p[1].toLocaleString()+'자 ('+pct+'%)\n';
+  });
+  // 압축 후 크기
+  try{
+    var comp=LZString.compressToEncodedURIComponent(JSON.stringify(S));
+    msg+='\n압축 후: '+comp.length.toLocaleString()+'자';
+    msg+='\nURL 한도(8000) '+(comp.length+200<8000?'이내 ✅':'초과 ❌ - 정리 필요');
+  }catch(e){}
+  alert(msg);
 }
 
 function showDebugInfo(){
