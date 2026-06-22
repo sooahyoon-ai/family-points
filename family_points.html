@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v1.7.1 | Family Points App | Release 2026-05-30 -->
+<!-- 가족포인트앱 v1.7.2 | Family Points App | Release 2026-05-30 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -1028,7 +1028,7 @@ function uc2(){return (S.opts&&S.opts.color2)||'#9A5C00';}
 function uc(who){return who==='ian'?uc1():uc2();}
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='1.7.1';
+var APP_VERSION='1.7.2';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1rHjta_5QdDjB9TT8IBDg4QcrjOuUhstmMmnHWr6EyP8'; // 운영 시트 (sheetId 없을 때 기본값)
 function getDefaultSheetId(){
@@ -1092,7 +1092,6 @@ function postToGas(url, body, onResult){
     };
     var sep=base.indexOf('?')>-1?'&':'?';
     sc.src=base+sep+'action=saveChunk&callback='+cbName
-      +'&sid='+encodeURIComponent(sid)
       +'&sess='+sessId+'&idx='+i+'&total='+total
       +'&cdata='+encodeURIComponent(chunks[i])+'&t='+Date.now();
     document.head.appendChild(sc);
