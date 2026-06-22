@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v1.7.4 | Family Points App | Release 2026-05-30 -->
+<!-- 가족포인트앱 v1.7.5 | Family Points App | Release 2026-05-30 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -1028,7 +1028,7 @@ function uc2(){return (S.opts&&S.opts.color2)||'#9A5C00';}
 function uc(who){return who==='ian'?uc1():uc2();}
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='1.7.4';
+var APP_VERSION='1.7.5';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1rHjta_5QdDjB9TT8IBDg4QcrjOuUhstmMmnHWr6EyP8'; // 운영 시트 (sheetId 없을 때 기본값)
 function getDefaultSheetId(){
@@ -1047,9 +1047,10 @@ var _pendingSync=false;
 // GAS POST 저장: fetch 우선, 실패 시 hidden form+iframe 폴백 (Safari/iPad CORS 우회)
 // onResult(success, responseTextOrNull) 콜백
 function postToGas(url, body, onResult){
-  // 302 리다이렉트로 JSONP가 불안정 → fetch no-cors로 조각 순차 전송.
-  // no-cors는 요청을 확실히 보내고 302도 처리됨(응답은 못 읽음).
-  // 모든 조각 전송 후 읽기(JSONP)로 저장 검증.
+  // fetch는 Apps Script의 echo 리다이렉트에서 400 발생 → 사용 불가.
+  // JSONP script 태그로 조각 전송(읽기처럼 리다이렉트 정상 처리됨).
+  // 콜백은 302로 안 오므로 기다리지 않고, 고정 간격(1.5초)으로 순차 전송.
+  // 모든 조각 전송 후 읽기로 저장 검증.
   window._lastPostLog='압축 시작';
   var compressed;
   try{ compressed=LZString.compressToEncodedURIComponent(body); }
@@ -1063,30 +1064,28 @@ function postToGas(url, body, onResult){
   var sessId='s'+Date.now()+Math.floor(Math.random()*10000);
   var marker=null;
   try{ marker=JSON.parse(body).lastModified||null; }catch(e){}
-  window._lastPostLog='압축'+compressed.length+'자 → '+total+'조각 no-cors 전송';
+  window._lastPostLog='압축'+compressed.length+'자 → '+total+'조각 전송(script태그)';
 
-  // 조각을 순서대로 fetch no-cors로 전송 (await 체인)
-  function sendAll(){
-    var i=0;
-    function step(){
-      if(i>=total){
-        window._lastPostLog=total+'조각 전송완료, 서버확인';
-        setTimeout(function(){ verifyAfterSave(marker, onResult); }, 2000);
-        return;
-      }
-      var sep=base.indexOf('?')>-1?'&':'?';
-      var u=base+sep+'action=saveChunk&sess='+sessId+'&idx='+i+'&total='+total
-        +'&cdata='+encodeURIComponent(chunks[i])+'&t='+Date.now();
-      fetch(u,{method:'GET',mode:'no-cors',redirect:'follow'})
-        .then(function(){ i++; window._lastPostLog='조각'+i+'/'+total+' 전송'; setTimeout(step,300); })
-        .catch(function(err){
-          // no-cors는 보통 throw 안 하지만, 혹시 나면 다음 조각 계속
-          i++; setTimeout(step,300);
-        });
+  function sendChunk(i){
+    if(i>=total){
+      window._lastPostLog=total+'조각 전송완료, 서버확인';
+      setTimeout(function(){ verifyAfterSave(marker, onResult); }, 2500);
+      return;
     }
-    step();
+    var sc=document.createElement('script');
+    // 콜백 기다리지 않음. 일정 시간 후 제거하고 다음 조각.
+    var sep=base.indexOf('?')>-1?'&':'?';
+    sc.src=base+sep+'action=saveChunk&sess='+sessId+'&idx='+i+'&total='+total
+      +'&cdata='+encodeURIComponent(chunks[i])+'&t='+Date.now();
+    document.head.appendChild(sc);
+    window._lastPostLog='조각'+(i+1)+'/'+total+' 전송중';
+    // 1.5초 후 다음 조각 (서버가 E열에 쓸 시간 확보)
+    setTimeout(function(){
+      if(sc.parentNode)sc.parentNode.removeChild(sc);
+      sendChunk(i+1);
+    }, 1500);
   }
-  sendAll();
+  sendChunk(0);
 }
 
 // 저장 후 읽기로 marker(lastModified) 반영 확인
@@ -1110,7 +1109,7 @@ function verifyAfterSave(marker, onResult){
       var serverTS=r.lastModified||0;
       if(marker&&serverTS===marker){ window._lastPostLog='저장 확인됨'; onResult(true,'저장 성공'); }
       else if(!marker){ onResult(true,'전송됨'); }
-      else { window._lastPostLog='서버 미반영(보낸:'+marker+' 서버:'+serverTS+')'; onResult(false,'서버 미반영'); }
+      else { window._lastPostLog='서버 미반영(보낸:'+marker+' 서버:'+serverTS+')'; onResult(false,'서버 미반영 (보낸:'+marker+' 서버:'+serverTS+')'); }
     }catch(e){ onResult(true,'전송됨(검증 파싱실패)'); }
   };
   sc.onerror=function(){
