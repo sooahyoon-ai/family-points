@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v1.7.5 | Family Points App | Release 2026-05-30 -->
+<!-- 가족포인트앱 v2.0.0 | Family Points App | Release 2026-05-30 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -1028,7 +1028,7 @@ function uc2(){return (S.opts&&S.opts.color2)||'#9A5C00';}
 function uc(who){return who==='ian'?uc1():uc2();}
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='1.7.5';
+var APP_VERSION='2.0.0';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1rHjta_5QdDjB9TT8IBDg4QcrjOuUhstmMmnHWr6EyP8'; // 운영 시트 (sheetId 없을 때 기본값)
 function getDefaultSheetId(){
@@ -1253,25 +1253,17 @@ function syncLoad(onDone){
     if(onDone)onDone(false);
     return;
   }
-  setSyncStatus('syncing');
-  // JSONP 방식으로 CORS 우회
-  var cbName='_gasCb'+Date.now();
-  var script=document.createElement('script');
-  var done=false;
-  var timer=setTimeout(function(){
-    if(done)return;done=true;
-    delete window[cbName];
-    if(script.parentNode)script.parentNode.removeChild(script);
-    console.error('[Sync] JSONP timeout');
-    setSyncStatus('error');
+  if(typeof google==='undefined'||!google.script||!google.script.run){
+    // Apps Script 환경이 아님(로컬/github 등) — 동기화 비활성
+    setSyncStatus('local');
     if(onDone)onDone(false);
-  },10000);
-  window[cbName]=function(raw){
-    if(done)return;done=true;
-    clearTimeout(timer);
-    delete window[cbName];
-    if(script.parentNode)script.parentNode.removeChild(script);
-    try{
+    return;
+  }
+  setSyncStatus('syncing');
+  // 같은 출처(Apps Script 서빙): google.script.run으로 직접 호출. CORS/리다이렉트 없음.
+  google.script.run
+    .withSuccessHandler(function(raw){
+      try{
       var text=typeof raw==='string'?raw:JSON.stringify(raw);
       if(!text||text==='null'||text==='""'){
         // 서버에 데이터 없음 = 첫 사용
@@ -1336,19 +1328,15 @@ function syncLoad(onDone){
       setSyncStatus('local');
       if(onDone)onDone(false);
     }
-  };
-  var _sidVal=S.opts.sheetId||getDefaultSheetId();var _sid='&sheetId='+encodeURIComponent(_sidVal);script.src=getGasUrl()+'?callback='+cbName+'&t='+Date.now()+_sid;
-  script.onerror=function(){
-    if(done)return;done=true;
-    clearTimeout(timer);
-    delete window[cbName];
-    setSyncStatus('error');
-    if(onDone)onDone(false);
-  };
-  document.head.appendChild(script);
+    })
+    .withFailureHandler(function(err){
+      console.error('[Sync] load 실패:', err);
+      setSyncStatus('error');
+      if(onDone)onDone(false);
+    })
+    .getData(S.opts.sheetId||getDefaultSheetId());
 }
 
-/* syncSave: 데이터 변경 시 로컬 즉시 저장 + 서버 디바운스 저장 (1.5초) */
 function syncSave(){
   // history가 비어있으면 서버에 올리지 않음 (빈 데이터 전파 방지)
   if(!S.history||S.history.length===0){
@@ -1356,35 +1344,23 @@ function syncSave(){
     return;
   }
   save(); // 로컬 즉시 저장
-  if(!isOnline)return; // 오프라인이면 로컬만
+  if(!isOnline)return;
   clearTimeout(syncTimer);
   syncTimer=setTimeout(function(){
-    // 서버 업로드 시 admin=false 마스킹 (관리자 모드는 기기 세션 전용)
     var uploadData=JSON.parse(JSON.stringify(S));
     uploadData.opts.admin=false;
-    // 서버 전송 데이터 축소: 60일 이전 dayData 제외 (점수는 history에 보존되어 총점 무영향)
-    // → URL 길이 한도 안에서 안정적으로 동기화
-    try{
-      var _cut=new Date();_cut.setDate(_cut.getDate()-60);
-      var _keep={};
-      Object.keys(uploadData.dayData||{}).forEach(function(ds){
-        var pp=ds.split('-');
-        var dd=new Date(parseInt(pp[0]),parseInt(pp[1])-1,parseInt(pp[2]));
-        if(dd>=_cut) _keep[ds]=uploadData.dayData[ds];
-      });
-      uploadData.dayData=_keep;
-    }catch(e){}
     var uploadJSON=JSON.stringify(uploadData);
     if(uploadJSON===lastSyncedJSON){return;}
+    if(typeof google==='undefined'||!google.script||!google.script.run){ setSyncStatus('local'); return; }
     setSyncStatus('syncing');
-    // postToGas가 base URL에 파라미터를 직접 붙이므로 깨끗한 URL을 전달
-    var saveUrl=getGasUrl();
-    postToGas(saveUrl,uploadJSON,function(ok,resp){
-      if(ok){
+    // 같은 출처: google.script.run으로 직접 저장. 압축/조각/CORS 전혀 불필요.
+    google.script.run
+      .withSuccessHandler(function(resp){
         lastSyncedJSON=uploadJSON;
         setSyncStatus('saved');
-      }else{
-        console.error('[Sync] save 실패:', resp||'network error');
+      })
+      .withFailureHandler(function(err){
+        console.error('[Sync] save 실패:', err);
         setSyncStatus('error');
         if(!syncSave._retrying){
           syncSave._retrying=true;
@@ -1393,11 +1369,11 @@ function syncSave(){
             if(navigator.onLine)syncSave();
           },5000);
         }
-      }
-    });
-  },1500);
+      })
+      .saveData(uploadJSON);
+  },800);
 }
-var _mem={};
+
 function sGet(k){try{return localStorage.getItem(k);}catch(e){return _mem[k]||null;}}
 function sSet(k,v){try{localStorage.setItem(k,v);}catch(e){_mem[k]=v;}}
 function mkState(){
