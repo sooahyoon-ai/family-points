@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 가족포인트앱 v1.5.5 | Family Points App | Release 2026-05-30 -->
+<!-- 가족포인트앱 v1.6.0 | Family Points App | Release 2026-05-30 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -1028,7 +1028,7 @@ function uc2(){return (S.opts&&S.opts.color2)||'#9A5C00';}
 function uc(who){return who==='ian'?uc1():uc2();}
 function userCount(){return (S.opts&&S.opts.userCount)||2;}
 
-var APP_VERSION='1.5.5';
+var APP_VERSION='1.6.0';
 var GAS_URL='https://script.google.com/macros/s/AKfycbyf3zaMZ7nuwQRKH9orSE3qrmTcCr20yo29y_Kcfqblg_GcBi6qUAF4lw7AsWUwXYDuSQ/exec';
 var DEFAULT_SHEET_ID='1rHjta_5QdDjB9TT8IBDg4QcrjOuUhstmMmnHWr6EyP8'; // 운영 시트 (sheetId 없을 때 기본값)
 function getDefaultSheetId(){
@@ -1047,66 +1047,29 @@ var _pendingSync=false;
 // GAS POST 저장: fetch 우선, 실패 시 hidden form+iframe 폴백 (Safari/iPad CORS 우회)
 // onResult(success, responseTextOrNull) 콜백
 function postToGas(url, body, onResult){
-  // 1순위: 깨끗한 URL로 POST (데이터 크기 제한 없음). doPost가 본문 그대로 저장.
-  // POST가 환경상 실패하면 → 2순위: 압축 GET(saveZip) 폴백.
-  window._lastPostLog='POST 시도 (body '+body.length+'자)';
-  var postDone=false;
+  // 6월 초 검증된 방식: 깨끗한 URL로 단순 POST. 우회로(압축/조각/GET) 없음.
+  // POST가 실패하는 정확한 원인을 _lastPostLog에 단계별로 기록.
+  window._lastPostLog='[1] fetch POST 호출 직전 (body '+body.length+'자)';
+  var t0=Date.now();
   fetch(getGasUrl(),{
     method:'POST',
     body:body,
     headers:{'Content-Type':'text/plain'}
   })
-  .then(function(r){ window._lastPostLog='POST status '+r.status; return r.text(); })
+  .then(function(r){
+    window._lastPostLog='[2] 응답 수신 status='+r.status+' ok='+r.ok+' type='+r.type+' ('+(Date.now()-t0)+'ms)';
+    return r.text();
+  })
   .then(function(resp){
-    if(postDone)return;postDone=true;
-    window._lastPostLog='POST 응답: '+(resp?resp.substring(0,30):'(빈값)');
+    window._lastPostLog='[3] 본문 수신: "'+(resp?resp.substring(0,50):'(빈값)')+'"';
     if(resp&&resp.indexOf('ok')===0){ onResult(true,'POST 저장 성공'); return; }
-    if(resp&&resp.indexOf('error')===0){ onResult(false,resp); return; }
-    // 응답이 애매하면 GET 폴백
-    saveViaGet(body,onResult);
+    if(resp&&resp.indexOf('error')===0){ onResult(false,'GAS오류: '+resp); return; }
+    onResult(false,'예상밖 응답: '+(resp?resp.substring(0,40):'빈값'));
   })
   .catch(function(err){
-    if(postDone)return;postDone=true;
-    window._lastPostLog='POST 실패('+((err&&err.message)?err.message:'?')+') → GET 폴백';
-    saveViaGet(body,onResult);  // POST 막히면 압축 GET 시도
+    window._lastPostLog='[X] fetch 거부됨: '+((err&&err.name)?err.name:'')+' / '+((err&&err.message)?err.message:String(err))+' ('+(Date.now()-t0)+'ms)';
+    onResult(false,(err&&err.message)?err.message:'Failed to fetch');
   });
-}
-
-// 압축 GET 저장 (POST 폴백). URL 한도 넘으면 실패 안내.
-function saveViaGet(body,onResult){
-  var compressed;
-  try{ compressed=LZString.compressToEncodedURIComponent(body); }
-  catch(e){ onResult(false,'압축 실패'); return; }
-  var base=getGasUrl();
-  var sid=S.opts.sheetId||getDefaultSheetId();
-  var fullLen=base.length+sid.length+compressed.length+80;
-  window._lastPostLog='GET 폴백: 압축'+compressed.length+'자, URL'+fullLen+'자';
-  if(fullLen>8000){
-    onResult(false,'POST 실패+GET불가(데이터 '+fullLen+'자 초과). 내역 정리 필요');
-    return;
-  }
-  var cbName='_z'+Date.now()+Math.floor(Math.random()*1000);
-  var sc=document.createElement('script');
-  var done=false;
-  var timer=setTimeout(function(){
-    if(done)return;done=true;delete window[cbName];
-    if(sc.parentNode)sc.parentNode.removeChild(sc);
-    onResult(false,'GET 저장 timeout');
-  },TIMEOUT_BACKUP);
-  window[cbName]=function(res){
-    if(done)return;done=true;clearTimeout(timer);delete window[cbName];
-    if(sc.parentNode)sc.parentNode.removeChild(sc);
-    if(res&&res.ok){ onResult(true,'GET 저장 성공'); }
-    else { onResult(false,(res&&res.error)||'GET 저장 실패'); }
-  };
-  sc.onerror=function(){
-    if(done)return;done=true;clearTimeout(timer);delete window[cbName];
-    if(sc.parentNode)sc.parentNode.removeChild(sc);
-    onResult(false,'GET 연결 실패');
-  };
-  var sep=base.indexOf('?')>-1?'&':'?';
-  sc.src=base+sep+'action=saveZip&callback='+cbName+'&sheetId='+encodeURIComponent(sid)+'&cdata='+compressed+'&t='+Date.now();
-  document.head.appendChild(sc);
 }
 
 function verifyServerSave(saveUrl, marker, onResult){
